@@ -1,0 +1,227 @@
+{% extends "base.html" %}
+
+{% block title %}Browse Auctions - BuyMe{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Browse Auctions</h2>
+    {% if current_user.is_authenticated %}
+        <a href="{{ url_for('auction.create') }}" class="btn btn-success">Create Auction</a>
+    {% endif %}
+</div>
+
+<div class="row">
+    <!-- Filters Sidebar -->
+    <div class="col-md-3">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h4>Filters</h4>
+            </div>
+            <div class="card-body">
+                <form action="{{ url_for('auction.browse') }}" method="get">
+                    <div class="mb-3">
+                        <label for="category_id" class="form-label">Category</label>
+                        <select class="form-select" id="category_id" name="category_id">
+                            <option value="">All Categories</option>
+                            {% for category in categories %}
+                                <option value="{{ category.id }}" 
+                                    {% if category_id == category.id %}selected{% endif %}>
+                                    {{ category.name }}
+                                </option>
+                                {% for subcategory in category.subcategories %}
+                                    <option value="{{ subcategory.id }}" 
+                                        {% if category_id == subcategory.id %}selected{% endif %}>
+                                        -- {{ subcategory.name }}
+                                    </option>
+                                    {% for subsubcategory in subcategory.subcategories %}
+                                        <option value="{{ subsubcategory.id }}" 
+                                            {% if category_id == subsubcategory.id %}selected{% endif %}>
+                                            ---- {{ subsubcategory.name }}
+                                        </option>
+                                    {% endfor %}
+                                {% endfor %}
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Price Range</label>
+                        <div class="row">
+                            <div class="col-6">
+                                <input type="number" class="form-control" placeholder="Min" 
+                                       name="min_price" value="{{ min_price }}">
+                            </div>
+                            <div class="col-6">
+                                <input type="number" class="form-control" placeholder="Max" 
+                                       name="max_price" value="{{ max_price }}">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Status</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="status" id="status_active" value="active" 
+                                   {% if status == 'active' %}checked{% endif %}>
+                            <label class="form-check-label" for="status_active">
+                                Active Auctions
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="status" id="status_ended" value="ended" 
+                                   {% if status == 'ended' %}checked{% endif %}>
+                            <label class="form-check-label" for="status_ended">
+                                Ended Auctions
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="status" id="status_all" value="all" 
+                                   {% if status == 'all' %}checked{% endif %}>
+                            <label class="form-check-label" for="status_all">
+                                All Auctions
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="sort_by" class="form-label">Sort By</label>
+                        <select class="form-select" id="sort_by" name="sort">
+                            <option value="end_time_asc" {% if sort_by == 'end_time_asc' %}selected{% endif %}>
+                                Ending Soon
+                            </option>
+                            <option value="end_time_desc" {% if sort_by == 'end_time_desc' %}selected{% endif %}>
+                                Ending Later
+                            </option>
+                            <option value="price_asc" {% if sort_by == 'price_asc' %}selected{% endif %}>
+                                Price (Low to High)
+                            </option>
+                            <option value="price_desc" {% if sort_by == 'price_desc' %}selected{% endif %}>
+                                Price (High to Low)
+                            </option>
+                            <option value="newest" {% if sort_by == 'newest' %}selected{% endif %}>
+                                Recently Added
+                            </option>
+                        </select>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">Apply Filters</button>
+                        <a href="{{ url_for('auction.browse') }}" class="btn btn-outline-secondary">Clear Filters</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Advanced Search Link -->
+        <div class="text-center mb-4">
+            <a href="{{ url_for('search.advanced') }}">Advanced Search</a>
+        </div>
+    </div>
+    
+    <!-- Auction Results -->
+    <div class="col-md-9">
+        <div class="mb-3">
+            <h4>
+                {% if category_id %}
+                    {{ categories|selectattr('id', 'eq', category_id)|map(attribute='name')|first }} 
+                {% else %}
+                    All Categories
+                {% endif %}
+                
+                {% if min_price or max_price %}
+                    - 
+                    {% if min_price %}${{ min_price }}{% else %}$0{% endif %}
+                    to 
+                    {% if max_price %}${{ max_price }}{% else %}Any{% endif %}
+                {% endif %}
+                
+                {% if status != 'active' %}
+                    - {{ status|capitalize }}
+                {% endif %}
+            </h4>
+        </div>
+        
+        {% if auctions.items %}
+            <div class="row">
+                {% for auction in auctions.items %}
+                    <div class="col-md-4 mb-4">
+                        <div class="card h-100">
+                            {% if auction.item.image_url %}
+                                <img src="{{ auction.item.image_url }}" class="card-img-top" alt="{{ auction.item.name }}">
+                            {% else %}
+                                <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 150px;">
+                                    <span class="text-muted">No Image</span>
+                                </div>
+                            {% endif %}
+                            <div class="card-body">
+                                <h5 class="card-title">{{ auction.title }}</h5>
+                                <p class="card-text">
+                                    <strong>Current Price:</strong> ${{ auction.current_price }}<br>
+                                    <strong>Bids:</strong> {{ auction.num_bids }}<br>
+                                    <strong>Ends:</strong> {{ auction.end_time.strftime('%b %d, %Y') }}
+                                </p>
+                            </div>
+                            <div class="card-footer">
+                                <a href="{{ url_for('auction.view', id=auction.id) }}" class="btn btn-sm btn-primary w-100">View Auction</a>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+            
+            <!-- Pagination -->
+            <nav aria-label="Page navigation">
+                <ul class="pagination justify-content-center">
+                    {% if auctions.has_prev %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('auction.browse', page=auctions.prev_num, category_id=category_id, min_price=min_price, max_price=max_price, status=status, sort=sort_by) }}">
+                                Previous
+                            </a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled">
+                            <a class="page-link" href="#" tabindex="-1" aria-disabled="true">Previous</a>
+                        </li>
+                    {% endif %}
+                    
+                    {% for page_num in auctions.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                        {% if page_num %}
+                            {% if page_num == auctions.page %}
+                                <li class="page-item active" aria-current="page">
+                                    <a class="page-link" href="#">{{ page_num }}</a>
+                                </li>
+                            {% else %}
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ url_for('auction.browse', page=page_num, category_id=category_id, min_price=min_price, max_price=max_price, status=status, sort=sort_by) }}">
+                                        {{ page_num }}
+                                    </a>
+                                </li>
+                            {% endif %}
+                        {% else %}
+                            <li class="page-item disabled">
+                                <a class="page-link" href="#">...</a>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if auctions.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('auction.browse', page=auctions.next_num, category_id=category_id, min_price=min_price, max_price=max_price, status=status, sort=sort_by) }}">
+                                Next
+                            </a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled">
+                            <a class="page-link" href="#" tabindex="-1" aria-disabled="true">Next</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        {% else %}
+            <div class="alert alert-info">
+                No auctions found matching your criteria. Try adjusting your filters.
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

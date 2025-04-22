@@ -1,0 +1,242 @@
+{% extends "base.html" %}
+
+{% block title %}{{ auction.title }} - BuyMe{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h2>{{ auction.title }}</h2>
+            </div>
+            <div class="card-body">
+                {% if auction.item.image_url %}
+                    <img src="{{ auction.item.image_url }}" class="img-fluid mb-3" alt="{{ auction.item.name }}">
+                {% endif %}
+                
+                <h4>Description</h4>
+                <p>{{ auction.description }}</p>
+                
+                <h4>Item Details</h4>
+                <table class="table">
+                    <tbody>
+                        <tr>
+                            <th>Category</th>
+                            <td>{{ auction.item.category.name }}</td>
+                        </tr>
+                        {% for key, value in auction.item.get_attributes().items() %}
+                            <tr>
+                                <th>{{ key|capitalize }}</th>
+                                <td>{{ value }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h3>Auction Details</h3>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <h4>${{ auction.current_price }}</h4>
+                    <p>Current bid ({{ auction.num_bids }} bids)</p>
+                </div>
+                
+                <div class="mb-3">
+                    {% if is_ended %}
+                        <div class="alert alert-secondary">
+                            This auction has ended
+                        </div>
+                        {% if auction.highest_bidder %}
+                            <p>
+                                <strong>Winner:</strong> 
+                                {% if auction.highest_bidder.id == current_user.id %}
+                                    You won this auction!
+                                {% else %}
+                                    {{ auction.highest_bidder.username }}
+                                {% endif %}
+                            </p>
+                        {% else %}
+                            <p>No bids were placed on this item.</p>
+                        {% endif %}
+                    {% else %}
+                        <div class="alert alert-info">
+                            <strong>Time left:</strong> <span id="countdown">Loading...</span>
+                        </div>
+                        <p><strong>Ends on:</strong> {{ auction.end_time.strftime('%b %d, %Y %I:%M %p') }}</p>
+                        
+                        {% if current_user.is_authenticated and current_user.id != auction.seller_id %}
+                            <form method="POST" action="{{ url_for('auction.place_bid', id=auction.id) }}">
+                                <div class="mb-3">
+                                    <label for="bid_amount" class="form-label">Your Bid ($)</label>
+                                    <input type="number" class="form-control" id="bid_amount" name="bid_amount" 
+                                           step="0.01" min="{{ auction.next_valid_bid_amount() }}" required>
+                                    <div class="form-text">
+                                        Minimum bid: ${{ auction.next_valid_bid_amount() }}
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="enable_auto_bid" onchange="toggleAutoBid()">
+                                        <label class="form-check-label" for="enable_auto_bid">
+                                            Enable automatic bidding
+                                        </label>
+                                    </div>
+                                </div>
+                                
+                                <div id="auto_bid_section" class="mb-3" style="display: none;">
+                                    <label for="auto_bid_limit" class="form-label">Maximum Bid Limit ($)</label>
+                                    <input type="number" class="form-control" id="auto_bid_limit" name="auto_bid_limit" 
+                                           step="0.01" min="{{ auction.next_valid_bid_amount() }}">
+                                    <div class="form-text">
+                                        Your maximum bid will be kept secret. The system will automatically place the minimum necessary bid to keep you as the highest bidder until this limit is reached.
+                                    </div>
+                                </div>
+                                
+                                <div class="d-grid">
+                                    <button type="submit" class="btn btn-primary">Place Bid</button>
+                                </div>
+                            </form>
+                        {% elif current_user.is_authenticated and current_user.id == auction.seller_id %}
+                            <div class="alert alert-warning">
+                                You cannot bid on your own auction.
+                            </div>
+                        {% else %}
+                            <div class="alert alert-warning">
+                                <a href="{{ url_for('auth.login') }}">Log in</a> to place a bid.
+                            </div>
+                        {% endif %}
+                    {% endif %}
+                </div>
+                
+                <div class="mb-3">
+                    <p><strong>Seller:</strong> {{ auction.seller.username }}</p>
+                    <p><strong>Started:</strong> {{ auction.start_time.strftime('%b %d, %Y') }}</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Bid History Card -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h3>Bid History</h3>
+            </div>
+            <div class="card-body">
+                {% if bids %}
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Bidder</th>
+                                <th>Amount</th>
+                                <th>Time</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for bid in bids %}
+                                <tr>
+                                    <td>
+                                        {% if current_user.is_authenticated and bid.bidder_id == current_user.id %}
+                                            You
+                                        {% else %}
+                                            {{ bid.bidder.username }}
+                                        {% endif %}
+                                    </td>
+                                    <td>${{ bid.amount }}</td>
+                                    <td>{{ bid.created_at.strftime('%b %d, %I:%M %p') }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% else %}
+                    <p>No bids yet. Be the first to bid!</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if similar_items %}
+    <h3 class="mt-4">Similar Items</h3>
+    <div class="row">
+        {% for item in similar_items %}
+            <div class="col-md-3 mb-4">
+                <div class="card h-100">
+                    {% if item.item.image_url %}
+                        <img src="{{ item.item.image_url }}" class="card-img-top" alt="{{ item.item.name }}">
+                    {% else %}
+                        <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 150px;">
+                            <span class="text-muted">No Image</span>
+                        </div>
+                    {% endif %}
+                    <div class="card-body">
+                        <h5 class="card-title">{{ item.title }}</h5>
+                        <p class="card-text">
+                            <strong>Current Price:</strong> ${{ item.current_price }}<br>
+                            <strong>Bids:</strong> {{ item.num_bids }}
+                        </p>
+                    </div>
+                    <div class="card-footer">
+                        <a href="{{ url_for('auction.view', id=item.id) }}" class="btn btn-sm btn-primary w-100">View Auction</a>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function toggleAutoBid() {
+        const autoBidSection = document.getElementById('auto_bid_section');
+        const enableAutoBid = document.getElementById('enable_auto_bid');
+        
+        if (enableAutoBid.checked) {
+            autoBidSection.style.display = 'block';
+        } else {
+            autoBidSection.style.display = 'none';
+        }
+    }
+    
+    // Countdown timer
+    document.addEventListener('DOMContentLoaded', function() {
+        const countdownElement = document.getElementById('countdown');
+        if (!countdownElement) return;
+        
+        const endTime = new Date('{{ auction.end_time.isoformat() }}').getTime();
+        
+        function updateCountdown() {
+            const now = new Date().getTime();
+            const timeLeft = endTime - now;
+            
+            if (timeLeft <= 0) {
+                countdownElement.textContent = 'Auction ended';
+                location.reload();
+                return;
+            }
+            
+            const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
+            
+            let countdownText = '';
+            if (days > 0) countdownText += days + 'd ';
+            if (hours > 0 || days > 0) countdownText += hours + 'h ';
+            if (minutes > 0 || hours > 0 || days > 0) countdownText += minutes + 'm ';
+            countdownText += seconds + 's';
+            
+            countdownElement.textContent = countdownText;
+        }
+        
+        updateCountdown();
+        setInterval(updateCountdown, 1000);
+    });
+</script>
+{% endblock %}

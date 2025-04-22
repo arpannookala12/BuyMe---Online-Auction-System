@@ -1,0 +1,381 @@
+{% extends "base.html" %}
+
+{% block title %}
+    {% if report_type == 'earnings' %}
+        Earnings Report - BuyMe
+    {% elif report_type == 'items' %}
+        Items Report - BuyMe
+    {% elif report_type == 'users' %}
+        Users Report - BuyMe
+    {% else %}
+        Reports - BuyMe
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>
+        {% if report_type == 'earnings' %}
+            Earnings Report
+        {% elif report_type == 'items' %}
+            Items Report
+        {% elif report_type == 'users' %}
+            Users Report
+        {% else %}
+            Reports
+        {% endif %}
+    </h2>
+    <a href="{{ url_for('admin.dashboard') }}" class="btn btn-outline-primary">Back to Dashboard</a>
+</div>
+
+<!-- Report Type Navigation -->
+<ul class="nav nav-tabs mb-4">
+    <li class="nav-item">
+        <a class="nav-link {{ 'active' if report_type == 'earnings' else '' }}" 
+           href="{{ url_for('admin.reports', type='earnings', period=time_period) }}">Earnings</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link {{ 'active' if report_type == 'items' else '' }}" 
+           href="{{ url_for('admin.reports', type='items', period=time_period) }}">Items</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link {{ 'active' if report_type == 'users' else '' }}" 
+           href="{{ url_for('admin.reports', type='users', period=time_period) }}">Users</a>
+    </li>
+</ul>
+
+<!-- Time Period Filter -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5>Time Period</h5>
+    </div>
+    <div class="card-body">
+        <div class="btn-group" role="group">
+            <a href="{{ url_for('admin.reports', type=report_type, period='week') }}" 
+               class="btn btn-outline-primary {{ 'active' if time_period == 'week' else '' }}">
+                Last Week
+            </a>
+            <a href="{{ url_for('admin.reports', type=report_type, period='month') }}" 
+               class="btn btn-outline-primary {{ 'active' if time_period == 'month' else '' }}">
+                Last 30 Days
+            </a>
+            <a href="{{ url_for('admin.reports', type=report_type, period='year') }}" 
+               class="btn btn-outline-primary {{ 'active' if time_period == 'year' else '' }}">
+                Last Year
+            </a>
+            <a href="{{ url_for('admin.reports', type=report_type, period='all') }}" 
+               class="btn btn-outline-primary {{ 'active' if time_period == 'all' else '' }}">
+                All Time
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Report Content -->
+{% if report_type == 'earnings' %}
+    <div class="row">
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Total Earnings</h5>
+                </div>
+                <div class="card-body text-center">
+                    <h1 class="display-4">${{ report_data.total_earnings|round(2) }}</h1>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Earnings by Category</h5>
+                </div>
+                <div class="card-body">
+                    {% if report_data.category_earnings %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Category</th>
+                                        <th>Earnings</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for category, earnings in report_data.category_earnings.items() %}
+                                        <tr>
+                                            <td>{{ category }}</td>
+                                            <td>${{ earnings|round(2) }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-center">No data available for this time period.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-12 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Earnings by Seller</h5>
+                </div>
+                <div class="card-body">
+                    {% if report_data.seller_earnings %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Seller</th>
+                                        <th>Earnings</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for seller, earnings in report_data.seller_earnings.items() %}
+                                        <tr>
+                                            <td>{{ seller }}</td>
+                                            <td>${{ earnings|round(2) }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-center">No data available for this time period.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+{% elif report_type == 'items' %}
+    <div class="row">
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Best-Selling Items</h5>
+                </div>
+                <div class="card-body">
+                    {% if report_data.best_selling_items %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Item</th>
+                                        <th>Sales Count</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item, count in report_data.best_selling_items %}
+                                        <tr>
+                                            <td>{{ item }}</td>
+                                            <td>{{ count }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-center">No data available for this time period.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Best-Selling Categories</h5>
+                </div>
+                <div class="card-body">
+                    {% if report_data.best_selling_categories %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Category</th>
+                                        <th>Sales Count</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for category, count in report_data.best_selling_categories %}
+                                        <tr>
+                                            <td>{{ category }}</td>
+                                            <td>{{ count }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-center">No data available for this time period.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-12 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Most Valuable Items</h5>
+                </div>
+                <div class="card-body">
+                    {% if report_data.most_valuable_items %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Item</th>
+                                        <th>Auction Title</th>
+                                        <th>Highest Bid</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item, title, bid in report_data.most_valuable_items %}
+                                        <tr>
+                                            <td>{{ item }}</td>
+                                            <td>{{ title }}</td>
+                                            <td>${{ bid|round(2) }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-center">No data available for this time period.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+{% elif report_type == 'users' %}
+    <div class="row">
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Top Sellers (By Count)</h5>
+                </div>
+                <div class="card-body">
+                    {% if report_data.top_sellers_by_count %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Seller</th>
+                                        <th>Auctions Completed</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for seller, count in report_data.top_sellers_by_count %}
+                                        <tr>
+                                            <td>{{ seller }}</td>
+                                            <td>{{ count }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-center">No data available for this time period.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Top Sellers (By Earnings)</h5>
+                </div>
+                <div class="card-body">
+                    {% if report_data.top_sellers_by_earnings %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Seller</th>
+                                        <th>Earnings</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for seller, earnings in report_data.top_sellers_by_earnings %}
+                                        <tr>
+                                            <td>{{ seller }}</td>
+                                            <td>${{ earnings|round(2) }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-center">No data available for this time period.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Most Active Bidders</h5>
+                </div>
+                <div class="card-body">
+                    {% if report_data.top_bidders %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>User</th>
+                                        <th>Number of Bids</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for bidder, count in report_data.top_bidders %}
+                                        <tr>
+                                            <td>{{ bidder }}</td>
+                                            <td>{{ count }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-center">No data available for this time period.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5>New User Registrations</h5>
+                </div>
+                <div class="card-body text-center">
+                    <h1 class="display-4">{{ report_data.new_users }}</h1>
+                    <p class="text-muted">
+                        {% if time_period == 'week' %}
+                            in the last 7 days
+                        {% elif time_period == 'month' %}
+                            in the last 30 days
+                        {% elif time_period == 'year' %}
+                            in the last year
+                        {% else %}
+                            all time
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+
+{% block title %}Customer Representative Dashboard - BuyMe{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Customer Representative Dashboard</h2>
+</div>
+
+<div class="row">
+    <!-- Statistics Cards -->
+    <div class="col-md-4 mb-4">
+        <div class="card text-white bg-primary">
+            <div class="card-body">
+                <h5 class="card-title">Users</h5>
+                <p class="card-text display-4">{{ user_count }}</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-4">
+        <div class="card text-white bg-success">
+            <div class="card-body">
+                <h5 class="card-title">Active Auctions</h5>
+                <p class="card-text display-4">{{ active_auctions }}</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-4">
+        <div class="card text-white bg-info">
+            <div class="card-body">
+                <h5 class="card-title">Total Bids</h5>
+                <p class="card-text display-4">{{ total_bids }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Recent Auctions -->
+    <div class="col-md-12 mb-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Recent Auctions</h5>
+                <a href="{{ url_for('customer_rep.manage_auctions') }}" class="btn btn-sm btn-outline-primary">Manage All Auctions</a>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Title</th>
+                                <th>Seller</th>
+                                <th>Current Price</th>
+                                <th>Bids</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for auction in recent_auctions %}
+                                <tr>
+                                    <td>{{ auction.title }}</td>
+                                    <td>{{ auction.seller.username }}</td>
+                                    <td>${{ auction.current_price }}</td>
+                                    <td>{{ auction.num_bids }}</td>
+                                    <td>
+                                        {% if auction.end_time <= now() %}
+                                            <span class="badge bg-secondary">Ended</span>
+                                        {% else %}
+                                            {% if auction.is_active %}
+                                                <span class="badge bg-success">Active</span>
+                                            {% else %}
+                                                <span class="badge bg-danger">Deactivated</span>
+                                            {% endif %}
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="{{ url_for('auction.view', id=auction.id) }}" class="btn btn-sm btn-primary">View</a>
+                                        {% if auction.is_active and auction.end_time > now() %}
+                                            <form method="POST" action="{{ url_for('customer_rep.toggle_auction', id=auction.id) }}" class="d-inline">
+                                                <button type="submit" class="btn btn-sm btn-warning">Deactivate</button>
+                                            </form>
+                                        {% elif not auction.is_active and auction.end_time > now() %}
+                                            <form method="POST" action="{{ url_for('customer_rep.toggle_auction', id=auction.id) }}" class="d-inline">
+                                                <button type="submit" class="btn btn-sm btn-success">Activate</button>
+                                            </form>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Quick Links -->
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>Quick Links</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <a href="{{ url_for('customer_rep.manage_users') }}" class="btn btn-outline-primary d-block">Manage Users</a>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <a href="{{ url_for('customer_rep.manage_auctions') }}" class="btn btn-outline-success d-block">Manage Auctions</a>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <a href="{{ url_for('auction.browse') }}" class="btn btn-outline-info d-block">Browse Auctions</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Helper function to get current time for Jinja
+    function now() {
+        return new Date();
+    }
+</script>
+{% endblock %}

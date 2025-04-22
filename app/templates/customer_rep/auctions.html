@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Auctions - BuyMe{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Manage Auctions</h2>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header">
+        <h5>Search Auctions</h5>
+    </div>
+    <div class="card-body">
+        <form action="{{ url_for('customer_rep.manage_auctions') }}" method="get">
+            <div class="input-group">
+                <input type="text" class="form-control" placeholder="Search by title, description..." 
+                       name="search" value="{{ search }}">
+                <button class="btn btn-outline-primary" type="submit">Search</button>
+                {% if search %}
+                    <a href="{{ url_for('customer_rep.manage_auctions') }}" class="btn btn-outline-secondary">Clear</a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        {% if auctions %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Title</th>
+                            <th>Seller</th>
+                            <th>Current Price</th>
+                            <th>Bids</th>
+                            <th>End Date</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for auction in auctions %}
+                            <tr>
+                                <td>
+                                    <a href="{{ url_for('auction.view', id=auction.id) }}">{{ auction.title }}</a>
+                                </td>
+                                <td>{{ auction.seller.username }}</td>
+                                <td>${{ auction.current_price }}</td>
+                                <td>{{ auction.num_bids }}</td>
+                                <td>{{ auction.end_time.strftime('%b %d, %Y') }}</td>
+                                <td>
+                                    {% if auction.end_time <= now() %}
+                                        <span class="badge bg-secondary">Ended</span>
+                                    {% else %}
+                                        {% if auction.is_active %}
+                                            <span class="badge bg-success">Active</span>
+                                        {% else %}
+                                            <span class="badge bg-danger">Inactive</span>
+                                        {% endif %}
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('auction.view', id=auction.id) }}" class="btn btn-sm btn-primary">View</a>
+                                    {% if auction.is_active and auction.end_time > now() %}
+                                        <form method="POST" action="{{ url_for('customer_rep.toggle_auction', id=auction.id) }}" class="d-inline">
+                                            <button type="submit" class="btn btn-sm btn-warning">Deactivate</button>
+                                        </form>
+                                    {% elif not auction.is_active and auction.end_time > now() %}
+                                        <form method="POST" action="{{ url_for('customer_rep.toggle_auction', id=auction.id) }}" class="d-inline">
+                                            <button type="submit" class="btn btn-sm btn-success">Activate</button>
+                                        </form>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="alert alert-info">
+                {% if search %}
+                    No auctions found matching "{{ search }}". Please try a different search term.
+                {% else %}
+                    No auctions found.
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Helper function to get current time for Jinja
+    function now() {
+        return new Date();
+    }
+</script>
+{% endblock %}

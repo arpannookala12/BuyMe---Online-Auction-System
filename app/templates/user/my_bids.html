@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+{% block title %}My Bids - BuyMe{% endblock %}
+
+{% block content %}
+<h2 class="mb-4">My Bids</h2>
+
+<div class="card mb-4">
+    <div class="card-header">
+        <ul class="nav nav-tabs card-header-tabs">
+            <li class="nav-item">
+                <a class="nav-link {{ 'active' if status == 'active' else '' }}" 
+                   href="{{ url_for('user.my_bids', status='active') }}">Active</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {{ 'active' if status == 'won' else '' }}" 
+                   href="{{ url_for('user.my_bids', status='won') }}">Won</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {{ 'active' if status == 'lost' else '' }}" 
+                   href="{{ url_for('user.my_bids', status='lost') }}">Lost</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {{ 'active' if status == 'all' else '' }}" 
+                   href="{{ url_for('user.my_bids', status='all') }}">All</a>
+            </li>
+        </ul>
+    </div>
+    <div class="card-body">
+        {% if auctions_bid_on %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Auction</th>
+                            <th>Your Highest Bid</th>
+                            <th>Current Highest Bid</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for auction_id, data in auctions_bid_on.items() %}
+                            <tr>
+                                <td>
+                                    <a href="{{ url_for('auction.view', id=auction_id) }}">{{ data.auction.title }}</a>
+                                </td>
+                                <td>${{ data.user_highest_bid.amount }}</td>
+                                <td>${{ data.highest_bid.amount }}</td>
+                                <td>
+                                    {% if data.is_ended %}
+                                        {% if data.is_highest_bidder %}
+                                            <span class="badge bg-success">Won</span>
+                                        {% else %}
+                                            <span class="badge bg-danger">Lost</span>
+                                        {% endif %}
+                                    {% else %}
+                                        {% if data.is_highest_bidder %}
+                                            <span class="badge bg-primary">Highest Bidder</span>
+                                        {% else %}
+                                            <span class="badge bg-warning">Outbid</span>
+                                        {% endif %}
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('auction.view', id=auction_id) }}" class="btn btn-sm btn-primary">View</a>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="alert alert-info">
+                {% if status == 'active' %}
+                    You don't have any active bids.
+                {% elif status == 'won' %}
+                    You haven't won any auctions yet.
+                {% elif status == 'lost' %}
+                    You don't have any lost auctions.
+                {% else %}
+                    You haven't placed any bids yet.
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

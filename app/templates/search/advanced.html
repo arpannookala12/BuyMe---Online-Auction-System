@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+
+{% block title %}Advanced Search - BuyMe{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h3>Advanced Search</h3>
+            </div>
+            <div class="card-body">
+                <form action="{{ url_for('search.advanced') }}" method="get">
+                    <div class="mb-3">
+                        <label for="query" class="form-label">Search Terms</label>
+                        <input type="text" class="form-control" id="query" name="query" 
+                               value="{{ request.args.get('query', '') }}">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="category_id" class="form-label">Category</label>
+                        <select class="form-select" id="category_id" name="category_id">
+                            <option value="">All Categories</option>
+                            {% for category in categories %}
+                                <option value="{{ category.id }}" 
+                                    {% if request.args.get('category_id')|int == category.id %}selected{% endif %}>
+                                    {{ category.name }}
+                                </option>
+                                {% for subcategory in category.subcategories %}
+                                    <option value="{{ subcategory.id }}"
+                                        {% if request.args.get('category_id')|int == subcategory.id %}selected{% endif %}>
+                                        -- {{ subcategory.name }}
+                                    </option>
+                                    {% for subsubcategory in subcategory.subcategories %}
+                                        <option value="{{ subsubcategory.id }}"
+                                            {% if request.args.get('category_id')|int == subsubcategory.id %}selected{% endif %}>
+                                            ---- {{ subsubcategory.name }}
+                                        </option>
+                                    {% endfor %}
+                                {% endfor %}
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="min_price" class="form-label">Min Price ($)</label>
+                            <input type="number" class="form-control" id="min_price" name="min_price" 
+                                   step="0.01" min="0" value="{{ request.args.get('min_price', '') }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="max_price" class="form-label">Max Price ($)</label>
+                            <input type="number" class="form-control" id="max_price" name="max_price" 
+                                   step="0.01" min="0" value="{{ request.args.get('max_price', '') }}">
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="status" class="form-label">Auction Status</label>
+                        <select class="form-select" id="status" name="status">
+                            <option value="active" 
+                                {% if request.args.get('status') == 'active' or not request.args.get('status') %}selected{% endif %}>
+                                Active Auctions
+                            </option>
+                            <option value="ended" 
+                                {% if request.args.get('status') == 'ended' %}selected{% endif %}>
+                                Ended Auctions
+                            </option>
+                            <option value="all" 
+                                {% if request.args.get('status') == 'all' %}selected{% endif %}>
+                                All Auctions
+                            </option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="sort" class="form-label">Sort By</label>
+                        <select class="form-select" id="sort" name="sort">
+                            <option value="end_time_asc" 
+                                {% if request.args.get('sort') == 'end_time_asc' or not request.args.get('sort') %}selected{% endif %}>
+                                Ending Soon
+                            </option>
+                            <option value="end_time_desc" 
+                                {% if request.args.get('sort') == 'end_time_desc' %}selected{% endif %}>
+                                Ending Later
+                            </option>
+                            <option value="price_asc" 
+                                {% if request.args.get('sort') == 'price_asc' %}selected{% endif %}>
+                                Price (Low to High)
+                            </option>
+                            <option value="price_desc" 
+                                {% if request.args.get('sort') == 'price_desc' %}selected{% endif %}>
+                                Price (High to Low)
+                            </option>
+                            <option value="newest" 
+                                {% if request.args.get('sort') == 'newest' %}selected{% endif %}>
+                                Newest Listings
+                            </option>
+                        </select>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">Search</button>
+                        <a href="{{ url_for('search.advanced') }}" class="btn btn-outline-secondary">Clear Filters</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-8">
+        {% if results is not none %}
+            <h3>Search Results</h3>
+            
+            {% if results %}
+                <div class="mb-3">
+                    <p>Found {{ results|length }} results</p>
+                </div>
+                
+                <div class="row">
+                    {% for auction in results %}
+                        <div class="col-md-4 mb-4">
+                            <div class="card h-100">
+                                {% if auction.item.image_url %}
+                                    <img src="{{ auction.item.image_url }}" class="card-img-top" alt="{{ auction.item.name }}">
+                                {% else %}
+                                    <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 150px;">
+                                        <span class="text-muted">No Image</span>
+                                    </div>
+                                {% endif %}
+                                <div class="card-body">
+                                    <h5 class="card-title">{{ auction.title }}</h5>
+                                    <p class="card-text">
+                                        <strong>Current Price:</strong> ${{ auction.current_price }}<br>
+                                        <strong>Bids:</strong> {{ auction.num_bids }}<br>
+                                        <strong>Ends:</strong> {{ auction.end_time.strftime('%b %d, %Y') }}
+                                    </p>
+                                </div>
+                                <div class="card-footer">
+                                    <a href="{{ url_for('auction.view', id=auction.id) }}" class="btn btn-sm btn-primary w-100">View Auction</a>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="alert alert-info">
+                    No auctions found matching your search criteria. Try adjusting your filters.
+                </div>
+            {% endif %}
+        {% else %}
+            <div class="jumbotron">
+                <h2>Advanced Search</h2>
+                <p>Use the form to search for specific auctions. You can filter by keywords, category, price range, and more.</p>
+                <p>Looking for something specific? Create an <a href="{{ url_for('alert.manage') }}">alert</a> to be notified when matching items are listed.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

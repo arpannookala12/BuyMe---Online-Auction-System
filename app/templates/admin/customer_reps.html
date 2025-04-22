@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Customer Representatives - BuyMe{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Manage Customer Representatives</h2>
+    <a href="{{ url_for('admin.create_rep') }}" class="btn btn-success">Create New Rep</a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        {% if customer_reps %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Username</th>
+                            <th>Email</th>
+                            <th>Name</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for rep in customer_reps %}
+                            <tr>
+                                <td>{{ rep.username }}</td>
+                                <td>{{ rep.email }}</td>
+                                <td>{{ rep.first_name }} {{ rep.last_name }}</td>
+                                <td>{{ rep.created_at.strftime('%b %d, %Y') }}</td>
+                                <td>
+                                    <a href="{{ url_for('customer_rep.view_user', id=rep.id) }}" class="btn btn-sm btn-primary">View</a>
+                                    <!-- Add additional actions as needed -->
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="alert alert-info">
+                No customer representatives found. <a href="{{ url_for('admin.create_rep') }}">Create one now</a>.
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

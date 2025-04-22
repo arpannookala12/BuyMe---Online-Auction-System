@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Categories - BuyMe{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Manage Categories</h2>
+    <a href="{{ url_for('admin.create_category') }}" class="btn btn-success">Create New Category</a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        {% if categories %}
+            <ul class="list-group">
+                {% for category in categories %}
+                    <li class="list-group-item">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5>{{ category.name }}</h5>
+                            <span class="badge bg-primary rounded-pill">{{ category.items.count() }} items</span>
+                        </div>
+                        {% if category.description %}
+                            <p class="mb-2">{{ category.description }}</p>
+                        {% endif %}
+                        
+                        {% if category.subcategories.count() > 0 %}
+                            <strong>Subcategories:</strong>
+                            <ul class="list-group list-group-flush mt-2">
+                                {% for subcategory in category.subcategories %}
+                                    <li class="list-group-item bg-light">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <h6>{{ subcategory.name }}</h6>
+                                            <span class="badge bg-secondary rounded-pill">{{ subcategory.items.count() }} items</span>
+                                        </div>
+                                        {% if subcategory.description %}
+                                            <p class="mb-2">{{ subcategory.description }}</p>
+                                        {% endif %}
+                                        
+                                        {% if subcategory.subcategories.count() > 0 %}
+                                            <strong>Subcategories:</strong>
+                                            <ul class="list-group list-group-flush mt-2">
+                                                {% for subsubcategory in subcategory.subcategories %}
+                                                    <li class="list-group-item bg-light">
+                                                        <div class="d-flex justify-content-between align-items-center">
+                                                            <span>{{ subsubcategory.name }}</span>
+                                                            <span class="badge bg-secondary rounded-pill">{{ subsubcategory.items.count() }} items</span>
+                                                        </div>
+                                                    </li>
+                                                {% endfor %}
+                                            </ul>
+                                        {% endif %}
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <div class="alert alert-info">
+                No categories found. <a href="{{ url_for('admin.create_category') }}">Create one now</a>.
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block title %}BuyMe - Online Auction System{% endblock %}
+
+{% block content %}
+<div class="jumbotron">
+    <h1 class="display-4">Welcome to BuyMe!</h1>
+    <p class="lead">Find unique items and great deals in our online auction marketplace.</p>
+    
+    <div class="d-flex mt-4">
+        <a href="{{ url_for('auction.browse') }}" class="btn btn-primary me-2">Browse Auctions</a>
+        {% if current_user.is_authenticated %}
+            <a href="{{ url_for('auction.create') }}" class="btn btn-success">Create Auction</a>
+        {% else %}
+            <a href="{{ url_for('auth.register') }}" class="btn btn-outline-primary">Join Now</a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row mt-5">
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-header">
+                <h5>Categories</h5>
+            </div>
+            <div class="list-group list-group-flush">
+                {% for category in categories %}
+                    <a href="{{ url_for('auction.browse', category_id=category.id) }}" class="list-group-item list-group-item-action">
+                        {{ category.name }}
+                    </a>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-9">
+        <h3>Recently Added</h3>
+        <div class="row">
+            {% for auction in recent_auctions %}
+                <div class="col-md-3 mb-4">
+                    <div class="card h-100">
+                        {% if auction.item.image_url %}
+                            <img src="{{ auction.item.image_url }}" class="card-img-top" alt="{{ auction.item.name }}">
+                        {% else %}
+                            <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 150px;">
+                                <span class="text-muted">No Image</span>
+                            </div>
+                        {% endif %}
+                        <div class="card-body">
+                            <h5 class="card-title">{{ auction.title }}</h5>
+                            <p class="card-text">
+                                <strong>Current Price:</strong> ${{ auction.current_price }}<br>
+                                <strong>Bids:</strong> {{ auction.num_bids }}
+                            </p>
+                        </div>
+                        <div class="card-footer">
+                            <a href="{{ url_for('auction.view', id=auction.id) }}" class="btn btn-sm btn-primary w-100">View Auction</a>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+        
+        <h3 class="mt-4">Ending Soon</h3>
+        <div class="row">
+            {% for auction in ending_soon %}
+                <div class="col-md-3 mb-4">
+                    <div class="card h-100">
+                        {% if auction.item.image_url %}
+                            <img src="{{ auction.item.image_url }}" class="card-img-top" alt="{{ auction.item.name }}">
+                        {% else %}
+                            <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 150px;">
+                                <span class="text-muted">No Image</span>
+                            </div>
+                        {% endif %}
+                        <div class="card-body">
+                            <h5 class="card-title">{{ auction.title }}</h5>
+                            <p class="card-text">
+                                <strong>Current Price:</strong> ${{ auction.current_price }}<br>
+                                <strong>Ends:</strong> {{ auction.end_time.strftime('%b %d, %Y %I:%M %p') }}
+                            </p>
+                        </div>
+                        <div class="card-footer">
+                            <a href="{{ url_for('auction.view', id=auction.id) }}" class="btn btn-sm btn-primary w-100">View Auction</a>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

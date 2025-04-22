@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+
+{% block title %}User: {{ user.username }} - BuyMe{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>User Details: {{ user.username }}</h2>
+    <a href="{{ url_for('customer_rep.manage_users') }}" class="btn btn-outline-primary">Back to Users</a>
+</div>
+
+<div class="row">
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h3>User Information</h3>
+            </div>
+            <div class="card-body">
+                <p><strong>Username:</strong> {{ user.username }}</p>
+                <p><strong>Email:</strong> {{ user.email }}</p>
+                <p><strong>Name:</strong> {{ user.first_name }} {{ user.last_name }}</p>
+                <p><strong>Address:</strong> {{ user.address or 'Not provided' }}</p>
+                <p><strong>Phone:</strong> {{ user.phone or 'Not provided' }}</p>
+                <p><strong>Role:</strong> 
+                    {% if user.role == 'admin' %}
+                        <span class="badge bg-danger">Admin</span>
+                    {% elif user.role == 'customer_rep' %}
+                        <span class="badge bg-success">Customer Rep</span>
+                    {% else %}
+                        <span class="badge bg-primary">User</span>
+                    {% endif %}
+                </p>
+                <p><strong>Member Since:</strong> {{ user.created_at.strftime('%b %d, %Y') }}</p>
+                
+                <hr>
+                
+                <form method="POST" action="{{ url_for('customer_rep.reset_password', id=user.id) }}" 
+                      onsubmit="return confirm('Are you sure you want to reset this user\'s password?');">
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-warning">Reset Password</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h3>User's Auctions</h3>
+            </div>
+            <div class="card-body">
+                {% if auctions %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Title</th>
+                                    <th>Current Price</th>
+                                    <th>Bids</th>
+                                    <th>End Date</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for auction in auctions %}
+                                    <tr>
+                                        <td>
+                                            <a href="{{ url_for('auction.view', id=auction.id) }}">{{ auction.title }}</a>
+                                        </td>
+                                        <td>${{ auction.current_price }}</td>
+                                        <td>{{ auction.num_bids }}</td>
+                                        <td>{{ auction.end_time.strftime('%b %d, %Y') }}</td>
+                                        <td>
+                                            {% if auction.end_time <= now() %}
+                                                <span class="badge bg-secondary">Ended</span>
+                                            {% else %}
+                                                {% if auction.is_active %}
+                                                    <span class="badge bg-success">Active</span>
+                                                {% else %}
+                                                    <span class="badge bg-danger">Inactive</span>
+                                                {% endif %}
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <a href="{{ url_for('auction.view', id=auction.id) }}" class="btn btn-sm btn-primary">View</a>
+                                            {% if auction.is_active and auction.end_time > now() %}
+                                                <form method="POST" action="{{ url_for('customer_rep.toggle_auction', id=auction.id) }}" class="d-inline">
+                                                    <button type="submit" class="btn btn-sm btn-warning">Deactivate</button>
+                                                </form>
+                                            {% elif not auction.is_active and auction.end_time > now() %}
+                                                <form method="POST" action="{{ url_for('customer_rep.toggle_auction', id=auction.id) }}" class="d-inline">
+                                                    <button type="submit" class="btn btn-sm btn-success">Activate</button>
+                                                </form>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="alert alert-info">
+                        This user has not created any auctions.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h3>User's Bids</h3>
+            </div>
+            <div class="card-body">
+                {% if bids %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Auction</th>
+                                    <th>Bid Amount</th>
+                                    <th>Auto Bid Limit</th>
+                                    <th>Time</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for bid in bids %}
+                                    <tr>
+                                        <td>
+                                            <a href="{{ url_for('auction.view', id=bid.auction_id) }}">{{ bid.auction.title }}</a>
+                                        </td>
+                                        <td>${{ bid.amount }}</td>
+                                        <td>
+                                            {% if bid.auto_bid_limit %}
+                                                ${{ bid.auto_bid_limit }}
+                                            {% else %}
+                                                N/A
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ bid.created_at.strftime('%b %d, %Y %I:%M %p') }}</td>
+                                        <td>
+                                            {% if bid.auction.end_time > now() %}
+                                                <form method="POST" action="{{ url_for('customer_rep.remove_bid', id=bid.auction_id, bid_id=bid.id) }}" class="d-inline"
+                                                      onsubmit="return confirm('Are you sure you want to remove this bid?');">
+                                                    <button type="submit" class="btn btn-sm btn-danger">Remove Bid</button>
+                                                </form>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="alert alert-info">
+                        This user has not placed any bids.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Helper function to get current time for Jinja
+    function now() {
+        return new Date();
+    }
+</script>
+{% endblock %}

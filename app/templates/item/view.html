@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+
+{% block title %}{{ item.name }} - BuyMe{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>{{ item.name }}</h2>
+    <div>
+        <a href="{{ url_for('auction.browse') }}" class="btn btn-outline-primary me-2">Browse Auctions</a>
+        {% if current_user.is_authenticated %}
+            <a href="{{ url_for('auction.create') }}?item_id={{ item.id }}" class="btn btn-success">Create Auction</a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h3>Item Details</h3>
+            </div>
+            <div class="card-body">
+                {% if item.image_url %}
+                    <img src="{{ item.image_url }}" class="img-fluid mb-3" alt="{{ item.name }}">
+                {% endif %}
+                
+                <h4>Description</h4>
+                <p>{{ item.description }}</p>
+                
+                <h4>Category</h4>
+                <p>
+                    {% if item.category.parent %}
+                        {% if item.category.parent.parent %}
+                            {{ item.category.parent.parent.name }} &gt; 
+                        {% endif %}
+                        {{ item.category.parent.name }} &gt; 
+                    {% endif %}
+                    {{ item.category.name }}
+                </p>
+                
+                {% if item.attributes %}
+                    <h4>Specifications</h4>
+                    <table class="table">
+                        <tbody>
+                            {% for key, value in item.get_attributes().items() %}
+                                <tr>
+                                    <th>{{ key|capitalize }}</th>
+                                    <td>{{ value }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h3>Current Auctions</h3>
+            </div>
+            <div class="card-body">
+                {% set active_auctions = item.auctions.filter_by(is_active=True).all() %}
+                {% if active_auctions %}
+                    {% for auction in active_auctions %}
+                        <div class="card mb-3">
+                            <div class="card-body">
+                                <h5 class="card-title">
+                                    <a href="{{ url_for('auction.view', id=auction.id) }}">{{ auction.title }}</a>
+                                </h5>
+                                <p class="card-text">
+                                    <strong>Current Price:</strong> ${{ auction.current_price }}<br>
+                                    <strong>Bids:</strong> {{ auction.num_bids }}<br>
+                                    <strong>Ends:</strong> {{ auction.end_time.strftime('%b %d, %Y %I:%M %p') }}
+                                </p>
+                                <a href="{{ url_for('auction.view', id=auction.id) }}" class="btn btn-primary btn-sm">View Auction</a>
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-center">No active auctions for this item.</p>
+                    {% if current_user.is_authenticated %}
+                        <div class="d-grid">
+                            <a href="{{ url_for('auction.create') }}?item_id={{ item.id }}" class="btn btn-success">Create Auction</a>
+                        </div>
+                    {% endif %}
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h3>Past Auctions</h3>
+            </div>
+            <div class="card-body">
+                {% set ended_auctions = item.auctions.filter(Auction.end_time <= now()).all() %}
+                {% if ended_auctions %}
+                    {% for auction in ended_auctions %}
+                        <div class="card mb-3">
+                            <div class="card-body">
+                                <h5 class="card-title">
+                                    <a href="{{ url_for('auction.view', id=auction.id) }}">{{ auction.title }}</a>
+                                </h5>
+                                <p class="card-text">
+                                    <strong>Final Price:</strong> ${{ auction.current_price }}<br>
+                                    <strong>Total Bids:</strong> {{ auction.num_bids }}<br>
+                                    <strong>Ended:</strong> {{ auction.end_time.strftime('%b %d, %Y') }}
+                                </p>
+                                <a href="{{ url_for('auction.view', id=auction.id) }}" class="btn btn-outline-secondary btn-sm">View Details</a>
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-center">No past auctions for this item.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Helper function to get current time for Jinja
+    function now() {
+        return new Date();
+    }
+</script>
+{% endblock %}

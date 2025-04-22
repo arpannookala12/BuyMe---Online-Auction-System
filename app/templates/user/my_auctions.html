@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block title %}My Auctions - BuyMe{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>My Auctions</h2>
+    <a href="{{ url_for('auction.create') }}" class="btn btn-success">Create New Auction</a>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header">
+        <ul class="nav nav-tabs card-header-tabs">
+            <li class="nav-item">
+                <a class="nav-link {{ 'active' if status == 'active' else '' }}" 
+                   href="{{ url_for('user.my_auctions', status='active') }}">Active</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {{ 'active' if status == 'ended' else '' }}" 
+                   href="{{ url_for('user.my_auctions', status='ended') }}">Ended</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {{ 'active' if status == 'all' else '' }}" 
+                   href="{{ url_for('user.my_auctions', status='all') }}">All</a>
+            </li>
+        </ul>
+    </div>
+    <div class="card-body">
+        {% if auctions %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Title</th>
+                            <th>Current Price</th>
+                            <th>Bids</th>
+                            <th>End Date</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for auction in auctions %}
+                            <tr>
+                                <td>
+                                    <a href="{{ url_for('auction.view', id=auction.id) }}">{{ auction.title }}</a>
+                                </td>
+                                <td>${{ auction.current_price }}</td>
+                                <td>{{ auction.num_bids }}</td>
+                                <td>{{ auction.end_time.strftime('%b %d, %Y') }}</td>
+                                <td>
+                                    {% if auction.end_time <= now() %}
+                                        <span class="badge bg-secondary">Ended</span>
+                                        {% if auction.highest_bidder %}
+                                            {% if auction.is_reserve_met %}
+                                                <span class="badge bg-success">Sold</span>
+                                            {% else %}
+                                                <span class="badge bg-warning">Reserve Not Met</span>
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="badge bg-danger">No Bids</span>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="badge bg-primary">Active</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('auction.view', id=auction.id) }}" class="btn btn-sm btn-primary">View</a>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="alert alert-info">
+                {% if status == 'active' %}
+                    You don't have any active auctions.
+                {% elif status == 'ended' %}
+                    You don't have any ended auctions.
+                {% else %}
+                    You haven't created any auctions yet.
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Helper function to get current time for Jinja
+    function now() {
+        return new Date();
+    }
+</script>
+{% endblock %}

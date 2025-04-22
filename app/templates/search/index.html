@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block title %}Search Results - BuyMe{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <h2>Search Results</h2>
+    <form class="d-flex" action="{{ url_for('search.index') }}" method="get">
+        <input class="form-control me-2" type="search" placeholder="Search auctions..." 
+               name="q" value="{{ query }}" aria-label="Search" required>
+        <button class="btn btn-outline-primary" type="submit">Search</button>
+    </form>
+    <div class="mt-2">
+        <a href="{{ url_for('search.advanced') }}" class="text-decoration-none">Advanced Search</a>
+    </div>
+</div>
+
+{% if query %}
+    {% if results %}
+        <div class="mb-3">
+            <p>Found {{ results|length }} results for "{{ query }}"</p>
+        </div>
+        
+        <div class="row">
+            {% for auction in results %}
+                <div class="col-md-3 mb-4">
+                    <div class="card h-100">
+                        {% if auction.item.image_url %}
+                            <img src="{{ auction.item.image_url }}" class="card-img-top" alt="{{ auction.item.name }}">
+                        {% else %}
+                            <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 150px;">
+                                <span class="text-muted">No Image</span>
+                            </div>
+                        {% endif %}
+                        <div class="card-body">
+                            <h5 class="card-title">{{ auction.title }}</h5>
+                            <p class="card-text">
+                                <strong>Current Price:</strong> ${{ auction.current_price }}<br>
+                                <strong>Bids:</strong> {{ auction.num_bids }}<br>
+                                <strong>Ends:</strong> {{ auction.end_time.strftime('%b %d, %Y') }}
+                            </p>
+                        </div>
+                        <div class="card-footer">
+                            <a href="{{ url_for('auction.view', id=auction.id) }}" class="btn btn-sm btn-primary w-100">View Auction</a>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="alert alert-info">
+            No results found for "{{ query }}". Please try a different search term or use the <a href="{{ url_for('search.advanced') }}">Advanced Search</a>.
+        </div>
+    {% endif %}
+{% else %}
+    <div class="alert alert-info">
+        Enter a search term to find auctions.
+    </div>
+{% endif %}
+{% endblock %}

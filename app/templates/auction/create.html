@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+
+{% block title %}Create Auction - BuyMe{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h2>Create a New Auction</h2>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('auction.create') }}">
+                    <div class="mb-3">
+                        <label for="title" class="form-label">Auction Title</label>
+                        <input type="text" class="form-control" id="title" name="title" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea class="form-control" id="description" name="description" rows="4" required></textarea>
+                        <div class="form-text">Provide a detailed description of the item you're selling.</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="category_id" class="form-label">Category</label>
+                        <select class="form-select" id="category_id" name="category_id" required>
+                            <option value="">Select a category</option>
+                            {% for category in categories %}
+                                <option value="{{ category.id }}">{{ category.name }}</option>
+                                {% for subcategory in category.subcategories %}
+                                    <option value="{{ subcategory.id }}">-- {{ subcategory.name }}</option>
+                                    {% for subsubcategory in subcategory.subcategories %}
+                                        <option value="{{ subsubcategory.id }}">---- {{ subsubcategory.name }}</option>
+                                    {% endfor %}
+                                {% endfor %}
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div id="category_attributes" class="mb-3">
+                        <!-- Dynamic attributes will be loaded here based on selected category -->
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="initial_price" class="form-label">Starting Price ($)</label>
+                                <input type="number" class="form-control" id="initial_price" name="initial_price" step="0.01" min="0.01" required>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="min_increment" class="form-label">Minimum Bid Increment ($)</label>
+                                <input type="number" class="form-control" id="min_increment" name="min_increment" step="0.01" min="0.01" required>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="secret_min_price" class="form-label">Reserve Price ($)</label>
+                                <input type="number" class="form-control" id="secret_min_price" name="secret_min_price" step="0.01" min="0.01" required>
+                                <div class="form-text">The minimum price you're willing to accept (hidden from bidders).</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="duration_days" class="form-label">Auction Duration (days)</label>
+                        <select class="form-select" id="duration_days" name="duration_days" required>
+                            <option value="1">1 day</option>
+                            <option value="3">3 days</option>
+                            <option value="5">5 days</option>
+                            <option value="7" selected>7 days</option>
+                            <option value="10">10 days</option>
+                            <option value="14">14 days</option>
+                            <option value="30">30 days</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="item_name" class="form-label">Item Name (optional)</label>
+                        <input type="text" class="form-control" id="item_name" name="item_name">
+                        <div class="form-text">If left blank, the auction title will be used as the item name.</div>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">Create Auction</button>
+                        <a href="{{ url_for('main.index') }}" class="btn btn-outline-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // For a real implementation, this would dynamically load category attributes
+    document.getElementById('category_id').addEventListener('change', function() {
+        const categoryId = this.value;
+        const categoryAttributesDiv = document.getElementById('category_attributes');
+        
+        // Clear previous attributes
+        categoryAttributesDiv.innerHTML = '';
+        
+        if (!categoryId) return;
+        
+        // In a real implementation, this would fetch attributes from the server
+        // For now, we'll simulate some attributes based on the category ID
+        
+        // Example: If the category ID is odd, show some attributes for demonstration
+        if (categoryId % 2 === 1) {
+            categoryAttributesDiv.innerHTML = `
+                <h4>Category-specific attributes</h4>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="attribute_color" class="form-label">Color</label>
+                            <input type="text" class="form-control" id="attribute_color" name="attribute_color">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="attribute_size" class="form-label">Size</label>
+                            <input type="text" class="form-control" id="attribute_size" name="attribute_size">
+                        </div>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label for="attribute_condition" class="form-label">Condition</label>
+                    <select class="form-select" id="attribute_condition" name="attribute_condition">
+                        <option value="">Select condition</option>
+                        <option value="New">New</option>
+                        <option value="Like New">Like New</option>
+                        <option value="Very Good">Very Good</option>
+                        <option value="Good">Good</option>
+                        <option value="Acceptable">Acceptable</option>
+                    </select>
+                </div>
+            `;
+        }
+    });
+    
+    // Ensure reserve price is at least the initial price
+    document.getElementById('initial_price').addEventListener('change', function() {
+        const initialPrice = parseFloat(this.value) || 0;
+        const secretMinPriceField = document.getElementById('secret_min_price');
+        const secretMinPrice = parseFloat(secretMinPriceField.value) || 0;
+        
+        if (secretMinPrice < initialPrice) {
+            secretMinPriceField.value = initialPrice;
+        }
+        
+        secretMinPriceField.min = initialPrice;
+    });
+</script>
+{% endblock %}

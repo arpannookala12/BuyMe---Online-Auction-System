@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block title %}Create Item - BuyMe{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h2>Create a New Item</h2>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('item.create') }}">
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Item Name</label>
+                        <input type="text" class="form-control" id="name" name="name" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea class="form-control" id="description" name="description" rows="4" required></textarea>
+                        <div class="form-text">Provide a detailed description of the item.</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="category_id" class="form-label">Category</label>
+                        <select class="form-select" id="category_id" name="category_id" required>
+                            <option value="">Select a category</option>
+                            {% for category in categories %}
+                                {% if not category.parent_id %}
+                                    <option value="{{ category.id }}">{{ category.name }}</option>
+                                    {% for subcategory in category.subcategories %}
+                                        <option value="{{ subcategory.id }}">-- {{ subcategory.name }}</option>
+                                        {% for subsubcategory in subcategory.subcategories %}
+                                            <option value="{{ subsubcategory.id }}">---- {{ subsubcategory.name }}</option>
+                                        {% endfor %}
+                                    {% endfor %}
+                                {% endif %}
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div id="category_attributes" class="mb-3">
+                        <!-- Dynamic attributes will be loaded here based on selected category -->
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">Create Item</button>
+                        <a href="{{ url_for('main.index') }}" class="btn btn-outline-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Load category-specific attributes when a category is selected
+    document.getElementById('category_id').addEventListener('change', function() {
+        const categoryId = this.value;
+        const categoryAttributesDiv = document.getElementById('category_attributes');
+        
+        // Clear previous attributes
+        categoryAttributesDiv.innerHTML = '';
+        
+        if (!categoryId) return;
+        
+        // In a real implementation, this would fetch attributes from the server
+        // For now, we'll simulate some attributes based on the category ID
+        
+        // Example: If the category ID is odd, show some attributes for demonstration
+        if (categoryId % 2 === 1) {
+            categoryAttributesDiv.innerHTML = `
+                <h4>Category-specific attributes</h4>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="attribute_color" class="form-label">Color</label>
+                            <input type="text" class="form-control" id="attribute_color" name="attribute_color">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="attribute_size" class="form-label">Size</label>
+                            <input type="text" class="form-control" id="attribute_size" name="attribute_size">
+                        </div>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label for="attribute_condition" class="form-label">Condition</label>
+                    <select class="form-select" id="attribute_condition" name="attribute_condition">
+                        <option value="">Select condition</option>
+                        <option value="New">New</option>
+                        <option value="Like New">Like New</option>
+                        <option value="Very Good">Very Good</option>
+                        <option value="Good">Good</option>
+                        <option value="Acceptable">Acceptable</option>
+                    </select>
+                </div>
+            `;
+        }
+    });
+</script>
+{% endblock %}

@@ -4,7 +4,7 @@ from app import db
 from app.models import User, Auction, Bid, Category, Item
 from sqlalchemy import func
 from functools import wraps
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 

@@ -3,6 +3,7 @@ from flask_login import login_required, current_user
 from app import db
 from app.models import User, Auction, Bid
 from functools import wraps
+from datetime import datetime,timezone
 
 customer_rep_bp = Blueprint('customer_rep', __name__, url_prefix='/rep')
 
@@ -23,7 +24,7 @@ def dashboard():
     user_count = User.query.filter_by(role='user').count()
     active_auctions = Auction.query.filter_by(is_active=True).count()
     total_bids = Bid.query.count()
-    
+    current_time = datetime.utcnow()
     # Get recent auctions
     recent_auctions = Auction.query.order_by(Auction.created_at.desc()).limit(10).all()
     
@@ -31,7 +32,8 @@ def dashboard():
                           user_count=user_count,
                           active_auctions=active_auctions,
                           total_bids=total_bids,
-                          recent_auctions=recent_auctions)
+                          recent_auctions=recent_auctions,
+                          current_time=current_time)
 
 @customer_rep_bp.route('/users')
 @login_required
@@ -58,14 +60,14 @@ def manage_users():
 @customer_rep_required
 def view_user(id):
     user = User.query.get_or_404(id)
-    
+    current_time = datetime.utcnow()
     # Get user's auctions
     auctions = Auction.query.filter_by(seller_id=id).order_by(Auction.created_at.desc()).all()
     
     # Get user's bids
     bids = Bid.query.filter_by(bidder_id=id).order_by(Bid.created_at.desc()).all()
     
-    return render_template('customer_rep/view_user.html', user=user, auctions=auctions, bids=bids)
+    return render_template('customer_rep/view_user.html', user=user, auctions=auctions, bids=bids, current_time=current_time)
 
 @customer_rep_bp.route('/users/<int:id>/reset-password', methods=['POST'])
 @login_required

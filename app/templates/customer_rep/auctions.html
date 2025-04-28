@@ -52,7 +52,7 @@
                                 <td>{{ auction.num_bids }}</td>
                                 <td>{{ auction.end_time.strftime('%b %d, %Y') }}</td>
                                 <td>
-                                    {% if auction.end_time <= now() %}
+                                    {% if auction.end_time <= current_time %}
                                         <span class="badge bg-secondary">Ended</span>
                                     {% else %}
                                         {% if auction.is_active %}
@@ -64,11 +64,11 @@
                                 </td>
                                 <td>
                                     <a href="{{ url_for('auction.view', id=auction.id) }}" class="btn btn-sm btn-primary">View</a>
-                                    {% if auction.is_active and auction.end_time > now() %}
+                                    {% if auction.is_active and auction.end_time > current_time %}
                                         <form method="POST" action="{{ url_for('customer_rep.toggle_auction', id=auction.id) }}" class="d-inline">
                                             <button type="submit" class="btn btn-sm btn-warning">Deactivate</button>
                                         </form>
-                                    {% elif not auction.is_active and auction.end_time > now() %}
+                                    {% elif not auction.is_active and auction.end_time > current_time %}
                                         <form method="POST" action="{{ url_for('customer_rep.toggle_auction', id=auction.id) }}" class="d-inline">
                                             <button type="submit" class="btn btn-sm btn-success">Activate</button>
                                         </form>
@@ -92,11 +92,11 @@
 </div>
 {% endblock %}
 
-{% block scripts %}
+<!-- {% block scripts %}
 <script>
     // Helper function to get current time for Jinja
     function now() {
         return new Date();
     }
 </script>
-{% endblock %}
+{% endblock %} -->

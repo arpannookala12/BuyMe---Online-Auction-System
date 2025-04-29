@@ -49,7 +49,7 @@
                                 <td>{{ auction.num_bids }}</td>
                                 <td>{{ auction.end_time.strftime('%b %d, %Y') }}</td>
                                 <td>
-                                    {% if auction.end_time <= now() %}
+                                    {% if auction.end_time <= current_time %}
                                         <span class="badge bg-secondary">Ended</span>
                                         {% if auction.highest_bidder %}
                                             {% if auction.is_reserve_met %}
@@ -87,11 +87,11 @@
 </div>
 {% endblock %}
 
-{% block scripts %}
+<!-- {% block scripts %}
 <script>
     // Helper function to get current time for Jinja
     function now() {
         return new Date();
     }
 </script>
-{% endblock %}
+{% endblock %} -->

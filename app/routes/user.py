@@ -77,7 +77,7 @@ def my_auctions():
     # Get the auctions
     auctions = query.all()
     
-    return render_template('user/my_auctions.html', auctions=auctions, status=status)
+    return render_template('user/my_auctions.html', auctions=auctions, status=status, current_time=current_time)
 
 @user_bp.route('/my-bids')
 @login_required

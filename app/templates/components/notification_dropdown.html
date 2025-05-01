@@ -1,0 +1,42 @@
+{% if current_user.is_authenticated %}
+    {% set recent_notifications = current_user.get_recent_notifications(5) %}
+    <div class="dropdown">
+        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="bi bi-bell"></i>
+            {% if current_user.unread_notification_count() > 0 %}
+                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                    {{ current_user.unread_notification_count() }}
+                </span>
+            {% endif %}
+        </a>
+        <div class="dropdown-menu dropdown-menu-end notification-dropdown" style="width: 300px;">
+            <h6 class="dropdown-header">Notifications</h6>
+            {% if recent_notifications %}
+                {% for notification in recent_notifications %}
+                    <a class="dropdown-item {% if not notification.is_read %}unread{% endif %}" 
+                       href="{{ url_for('notification.list') }}#notification-{{ notification.id }}">
+                        <div class="d-flex align-items-center">
+                            <div class="flex-grow-1">
+                                <p class="mb-0">{{ notification.message }}</p>
+                                <small class="text-muted">{{ notification.created_at|timeago }}</small>
+                            </div>
+                            {% if not notification.is_read %}
+                                <div class="ms-2">
+                                    <span class="badge bg-primary rounded-pill">New</span>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </a>
+                {% endfor %}
+                <div class="dropdown-divider"></div>
+                <a class="dropdown-item text-center" href="{{ url_for('notification.list') }}">
+                    View All Notifications
+                </a>
+            {% else %}
+                <div class="dropdown-item text-center text-muted">
+                    No notifications
+                </div>
+            {% endif %}
+        </div>
+    </div>
+{% endif %} 

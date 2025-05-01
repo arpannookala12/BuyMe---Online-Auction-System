@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block title %}My Wishlist - BuyMe{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>My Wishlist</h2>
+    <a href="{{ url_for('auction.browse') }}" class="btn btn-primary">Browse Items</a>
+</div>
+
+{% if items_with_auctions %}
+    <div class="row">
+        {% for item_data in items_with_auctions %}
+            <div class="col-md-4 mb-4">
+                <div class="card h-100">
+                    {% if item_data.item.image_url %}
+                        <img src="{{ item_data.item.image_url }}" class="card-img-top" alt="{{ item_data.item.name }}">
+                    {% else %}
+                        <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 150px;">
+                            <span class="text-muted">No Image</span>
+                        </div>
+                    {% endif %}
+                    <div class="card-body">
+                        <h5 class="card-title">{{ item_data.item.name }}</h5>
+                        <p class="card-text">{{ item_data.item.description|truncate(100) }}</p>
+                        
+                        {% if item_data.wishlist_entry.notes %}
+                            <div class="alert alert-info">
+                                <small><strong>Your notes:</strong> {{ item_data.wishlist_entry.notes }}</small>
+                            </div>
+                        {% endif %}
+                        
+                        {% if item_data.active_auctions %}
+                            <h6 class="mt-3">Active Auctions:</h6>
+                            <ul class="list-group">
+                                {% for auction in item_data.active_auctions %}
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <a href="{{ url_for('auction.view', id=auction.id) }}">{{ auction.title|truncate(30) }}</a>
+                                            <div class="small text-muted">
+                                                Current: ${{ auction.current_price }} | Bids: {{ auction.num_bids }}
+                                            </div>
+                                        </div>
+                                        <a href="{{ url_for('auction.view', id=auction.id) }}" class="btn btn-sm btn-primary">Bid</a>
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        {% else %}
+                            <div class="alert alert-secondary mt-3">
+                                No active auctions for this item
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="card-footer">
+                        <form method="POST" action="{{ url_for('wishlist.remove', wishlist_id=item_data.wishlist_entry.id) }}" class="d-grid">
+                            <button type="submit" class="btn btn-outline-danger">Remove from Wishlist</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="alert alert-info">
+        <p>Your wishlist is empty. Browse auctions and add items to your wishlist to keep track of items you're interested in.</p>
+        <a href="{{ url_for('auction.browse') }}" class="btn btn-primary">Browse Auctions</a>
+    </div>
+{% endif %}
+{% endblock %}

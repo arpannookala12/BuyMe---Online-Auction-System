@@ -3,240 +3,577 @@
 {% block title %}{{ auction.title }} - BuyMe{% endblock %}
 
 {% block content %}
+<div class="container mt-4" data-auction-id="{{ auction.id }}">
 <div class="row">
+        <!-- Main auction details -->
     <div class="col-md-8">
         <div class="card mb-4">
-            <div class="card-header">
-                <h2>{{ auction.title }}</h2>
-            </div>
             <div class="card-body">
-                {% if auction.item.image_url %}
-                    <img src="{{ auction.item.image_url }}" class="img-fluid mb-3" alt="{{ auction.item.name }}">
-                {% endif %}
-                
-                <h4>Description</h4>
-                <p>{{ auction.description }}</p>
-                
-                <h4>Item Details</h4>
-                <table class="table">
-                    <tbody>
-                        <tr>
-                            <th>Category</th>
-                            <td>{{ auction.item.category.name }}</td>
-                        </tr>
-                        {% for key, value in auction.item.get_attributes().items() %}
-                            <tr>
-                                <th>{{ key|capitalize }}</th>
-                                <td>{{ value }}</td>
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+                    <h2 class="card-title">{{ auction.title }}</h2>
+                    <p class="text-muted">
+                        Listed by 
+                        <a href="{{ url_for('review.seller_reviews', seller_id=auction.seller_id) }}">
+                            {{ auction.seller.username }}
+                        </a>
+                        {% set seller_rating = Review.get_seller_rating(auction.seller_id) %}
+                        {% if seller_rating > 0 %}
+                                <span class="text-warning">
+                                {% for i in range(5) %}
+                                    {% if i < seller_rating|int %}
+                                            ★
+                                        {% else %}
+                                            ☆
+                                        {% endif %}
+                                    {% endfor %}
+                                ({{ "%.1f"|format(seller_rating) }})
+                                </span>
+                        {% endif %}
+                        on {{ auction.created_at.strftime('%Y-%m-%d') }}
+                    </p>
+                    
+                    {% if auction.item.image_url %}
+                    <img src="{{ auction.item.image_url }}" class="img-fluid rounded mb-3" alt="{{ auction.title }}">
+                    {% endif %}
+                    
+                    <div class="mb-4">
+                        <h4>Description</h4>
+                        <p>{{ auction.description }}</p>
+                    </div>
+                    
+                    <!-- Item Details -->
+                    <div class="mb-4">
+                        <h4>Item Details</h4>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <dl class="mb-0">
+                                    <dt>Category</dt>
+                                    <dd>{{ auction.item.category.name }}</dd>
+                                </dl>
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            {% set attributes = auction.item.attributes|fromjson %}
+                            {% if attributes %}
+                                {% for name, value in attributes.items() %}
+                                <div class="col-md-6 mb-2">
+                                    <dt class="text-muted">{{ name|title }}</dt>
+                                    <dd>{{ value }}</dd>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="col-12">
+                                    <p class="text-muted">No specifications available.</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
             </div>
         </div>
-    </div>
-    
-    <div class="col-md-4">
+        
+            <!-- Bidding History -->
         <div class="card mb-4">
             <div class="card-header">
-                <h3>Auction Details</h3>
+                    <h4 class="mb-0">Bidding History</h4>
             </div>
             <div class="card-body">
-                <div class="mb-3">
-                    <h4>${{ auction.current_price }}</h4>
-                    <p>Current bid ({{ auction.num_bids }} bids)</p>
-                </div>
-                
-                <div class="mb-3">
-                    {% if is_ended %}
-                        <div class="alert alert-secondary">
-                            This auction has ended
-                        </div>
-                        {% if auction.highest_bidder %}
-                            <p>
-                                <strong>Winner:</strong> 
-                                {% if auction.highest_bidder.id == current_user.id %}
-                                    You won this auction!
-                                {% else %}
-                                    {{ auction.highest_bidder.username }}
-                                {% endif %}
-                            </p>
-                        {% else %}
-                            <p>No bids were placed on this item.</p>
-                        {% endif %}
+                    {% if bids %}
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Bidder</th>
+                                    <th>Amount</th>
+                                    <th>Time</th>
+                                    <th>Type</th>
+                                    {% if current_user.is_customer_rep %}
+                                    <th>Actions</th>
+                                    {% endif %}
+                                </tr>
+                            </thead>
+                            <tbody id="bid-history-body">
+                                {% for bid in bids %}
+                                    <tr>
+                                    <td>{{ bid.bidder.username }}</td>
+                                    <td>${{ "%.2f"|format(bid.amount) }}</td>
+                                    <td>{{ bid.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                                        <td>
+                                        {% if bid.is_auto_bid %}
+                                        <span class="badge bg-info">Auto</span>
+                                            {% else %}
+                                        <span class="badge bg-primary">Manual</span>
+                                            {% endif %}
+                                        </td>
+                                    {% if current_user.is_customer_rep %}
+                                    <td>
+                                        <form action="{{ url_for('customer_rep.delete_bid', bid_id=bid.id) }}" method="POST" class="d-inline">
+                                            <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure you want to delete this bid?')">
+                                                Delete Bid
+                                            </button>
+                                        </form>
+                                    </td>
+                                    {% endif %}
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
                     {% else %}
-                        <div class="alert alert-info">
-                            <strong>Time left:</strong> <span id="countdown">Loading...</span>
-                        </div>
-                        <p><strong>Ends on:</strong> {{ auction.end_time.strftime('%b %d, %Y %I:%M %p') }}</p>
-                        
-                        {% if current_user.is_authenticated and current_user.id != auction.seller_id %}
-                            <form method="POST" action="{{ url_for('auction.place_bid', id=auction.id) }}">
-                                <div class="mb-3">
-                                    <label for="bid_amount" class="form-label">Your Bid ($)</label>
-                                    <input type="number" class="form-control" id="bid_amount" name="bid_amount" 
-                                           step="0.01" min="{{ auction.next_valid_bid_amount() }}" required>
-                                    <div class="form-text">
-                                        Minimum bid: ${{ auction.next_valid_bid_amount() }}
-                                    </div>
-                                </div>
-                                
-                                <div class="mb-3">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="enable_auto_bid" onchange="toggleAutoBid()">
-                                        <label class="form-check-label" for="enable_auto_bid">
-                                            Enable automatic bidding
-                                        </label>
-                                    </div>
-                                </div>
-                                
-                                <div id="auto_bid_section" class="mb-3" style="display: none;">
-                                    <label for="auto_bid_limit" class="form-label">Maximum Bid Limit ($)</label>
-                                    <input type="number" class="form-control" id="auto_bid_limit" name="auto_bid_limit" 
-                                           step="0.01" min="{{ auction.next_valid_bid_amount() }}">
-                                    <div class="form-text">
-                                        Your maximum bid will be kept secret. The system will automatically place the minimum necessary bid to keep you as the highest bidder until this limit is reached.
-                                    </div>
-                                </div>
-                                
-                                <div class="d-grid">
-                                    <button type="submit" class="btn btn-primary">Place Bid</button>
-                                </div>
-                            </form>
-                        {% elif current_user.is_authenticated and current_user.id == auction.seller_id %}
-                            <div class="alert alert-warning">
-                                You cannot bid on your own auction.
-                            </div>
-                        {% else %}
-                            <div class="alert alert-warning">
-                                <a href="{{ url_for('auth.login') }}">Log in</a> to place a bid.
-                            </div>
-                        {% endif %}
+                    <p class="text-muted">No bids yet.</p>
                     {% endif %}
                 </div>
-                
-                <div class="mb-3">
-                    <p><strong>Seller:</strong> {{ auction.seller.username }}</p>
-                    <p><strong>Started:</strong> {{ auction.start_time.strftime('%b %d, %Y') }}</p>
+            </div>
+
+            <!-- Q&A Section -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Questions & Answers</h5>
+                </div>
+                <div class="card-body">
+                    {% if current_user.is_authenticated %}
+                    <form action="{{ url_for('auction.ask_question', auction_id=auction.id) }}" method="POST" class="mb-4">
+                        <div class="form-group">
+                            <label for="question_text">Ask a Question</label>
+                            <textarea class="form-control" id="question_text" name="question_text" rows="2" required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Submit Question</button>
+                    </form>
+                    {% endif %}
+
+                    {% if auction.questions %}
+                    <div class="questions-list" style="max-height: 400px; overflow-y: auto;">
+                        {% for question in auction.questions %}
+                        <div class="question-item mb-4" data-question-id="{{ question.id }}">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h6 class="mb-1">{{ question.user.username }} asked:</h6>
+                                    <p class="mb-2">{{ question.question_text }}</p>
+                                    <small class="text-muted">{{ question.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                                </div>
+                                <span class="badge {% if question.answer_text %}bg-success{% else %}bg-warning{% endif %}">
+                                    {% if question.answer_text %}Answered{% else %}Pending{% endif %}
+                                </span>
+                            </div>
+
+                            {% if question.answer_text %}
+                            <div class="answer-item mt-3 p-3 bg-light rounded">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <h6 class="mb-1">
+                                            {{ question.answered_by.username }}
+                                            {% if question.answered_by.is_customer_rep %}
+                                            <span class="badge bg-info">Customer Representative</span>
+                                            {% endif %}
+                                            answered:
+                                        </h6>
+                                        <p class="mb-2">{{ question.answer_text }}</p>
+                                        <small class="text-muted">{{ question.answered_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+
+                            {% if current_user.is_authenticated and (current_user.id == auction.seller_id or current_user.is_customer_rep) and not question.answer_text %}
+                            <form action="{{ url_for('auction.answer_question', question_id=question.id) }}" method="POST" class="mt-3">
+                                <div class="form-group">
+                                    <textarea class="form-control" name="answer_text" rows="2" required placeholder="Write your answer..."></textarea>
+                                </div>
+                                <button type="submit" class="btn btn-primary btn-sm">Submit Answer</button>
+                            </form>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted">No questions have been asked yet.</p>
+                    {% endif %}
                 </div>
             </div>
         </div>
         
-        <!-- Bid History Card -->
-        <div class="card mb-4">
-            <div class="card-header">
-                <h3>Bid History</h3>
+        <!-- Bidding sidebar -->
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h4 class="mb-0">Auction Status</h4>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <h5>Current Price</h5>
+                        <h2 class="text-primary">${{ "%.2f"|format(auction.current_price) }}</h2>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <h5>Time Remaining</h5>
+                        {% if is_ended %}
+                            {% if auction.winner and auction.winner.id == current_user.id %}
+                                <div class="alert alert-success">
+                                    <h4>🎉 Congratulations!</h4>
+                                    <p>You've won this auction! The item is yours for ${{ "%.2f"|format(auction.current_price) }}</p>
+                                    <p>The seller will contact you soon with payment and delivery details.</p>
+                                </div>
+                            {% elif auction.winner %}
+                                <div class="alert alert-info">
+                                    <p>This auction has ended.</p>
+                                    <p>Winner: {{ auction.winner.username }}</p>
+                                    <p>Winning bid: ${{ "%.2f"|format(auction.current_price) }}</p>
+                                </div>
+                            {% else %}
+                                <div class="alert alert-warning">
+                                    <p>This auction has ended.</p>
+                                    <p>No winner - reserve price was not met</p>
+                                </div>
+                            {% endif %}
+                        {% else %}
+                            <div id="countdown-timer" class="display-4" data-end-time="{{ auction.end_time.isoformat() }}">
+                                Loading...
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <h5>Bid Stats</h5>
+                        <p data-bid-count="{{ auction.num_bids }}">Number of bids: {{ auction.num_bids }}</p>
+                        <p>Minimum increment: ${{ "%.2f"|format(auction.min_increment) }}</p>
+                    </div>
+                    
+                    {% if not is_ended and current_user.is_authenticated and current_user.id != auction.seller_id %}
+                    <form method="POST" action="{{ url_for('auction.place_bid', id=auction.id) }}" class="mb-3">
+                        <div class="mb-3">
+                            <label for="bid_amount" class="form-label">Your Bid</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" class="form-control" id="bid_amount" name="bid_amount" 
+                                       step="0.01" min="{{ auction.next_valid_bid_amount() }}" 
+                                       data-min-increment="{{ auction.min_increment }}" required>
+                            </div>
+                            <div class="form-text">
+                                Minimum bid: ${{ "%.2f"|format(auction.next_valid_bid_amount()) }}
+    </div>
+</div>
+
+                        <div class="mb-3">
+                            <label for="auto_bid_limit" class="form-label">Auto-bid Limit (Optional)</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" class="form-control" id="auto_bid_limit" name="auto_bid_limit" 
+                                       step="0.01" min="{{ auction.next_valid_bid_amount() }}">
+                            </div>
+                            <div class="form-text">
+                                Set a maximum amount you're willing to pay
+                            </div>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary w-100">Place Bid</button>
+                    </form>
+                    {% elif not current_user.is_authenticated %}
+                    <div class="alert alert-info">
+                        Please <a href="{{ url_for('auth.login') }}">login</a> to place a bid.
+                        </div>
+                    {% endif %}
+                    
+                    {% if current_user.is_authenticated %}
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('alert.manage') }}" class="btn btn-outline-primary">
+                            Manage Alerts
+                        </a>
+                        {% if current_user.is_authenticated %}
+                        <form method="POST" action="{{ url_for('wishlist.toggle', item_id=auction.item_id) }}" class="d-grid">
+                            {% set in_wishlist = auction.item.wishlist_entries|selectattr('user_id', 'equalto', current_user.id)|list|length > 0 %}
+                            <button type="submit" class="btn {{ 'btn-danger' if in_wishlist else 'btn-outline-primary' }}">
+                                <i class="bi {{ 'bi-heart-fill' if in_wishlist else 'bi-heart' }}"></i>
+                                {{ 'Remove from Wishlist' if in_wishlist else 'Add to Wishlist' }}
+                            </button>
+                        </form>
+                        {% endif %}
+                        {% if is_ended and auction.winner and auction.winner.id == current_user.id %}
+                            {% set has_reviewed = Review.query.filter_by(
+                                auction_id=auction.id,
+                                reviewer_id=current_user.id
+                            ).first() %}
+                            {% if not has_reviewed %}
+                                <a href="{{ url_for('review.create', auction_id=auction.id) }}" class="btn btn-outline-success">
+                                    Review Seller
+                                </a>
+                            {% endif %}
+                        {% endif %}
+                        {% if current_user.is_authenticated and (current_user.id == auction.seller_id or current_user.is_customer_rep) and not is_ended %}
+                        <form method="POST" action="{{ url_for('auction.end_auction', id=auction.id) }}" class="d-grid">
+                            <button type="submit" class="btn btn-danger">End Auction</button>
+                        </form>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
             </div>
-            <div class="card-body">
-                {% if bids %}
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th>Bidder</th>
-                                <th>Amount</th>
-                                <th>Time</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for bid in bids %}
-                                <tr>
-                                    <td>
-                                        {% if current_user.is_authenticated and bid.bidder_id == current_user.id %}
-                                            You
-                                        {% else %}
-                                            {{ bid.bidder.username }}
-                                        {% endif %}
-                                    </td>
-                                    <td>${{ bid.amount }}</td>
-                                    <td>{{ bid.created_at.strftime('%b %d, %I:%M %p') }}</td>
-                                </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                {% else %}
-                    <p>No bids yet. Be the first to bid!</p>
-                {% endif %}
+            
+            <!-- Similar Items -->
+            {% if similar_items %}
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">Similar Items</h4>
+                </div>
+                <div class="card-body">
+                    <div class="list-group">
+                        {% for item in similar_items %}
+                        <a href="{{ url_for('auction.view', id=item.id) }}" class="list-group-item list-group-item-action">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">{{ item.title }}</h6>
+                                <small>${{ "%.2f"|format(item.current_price) }}</small>
+                            </div>
+                            <small class="text-muted">
+                                Ends {{ item.end_time.strftime('%Y-%m-%d %H:%M') }}
+                            </small>
+                        </a>
+                        {% endfor %}
+                    </div>
+                </div>
             </div>
+            {% endif %}
         </div>
     </div>
 </div>
 
-{% if similar_items %}
-    <h3 class="mt-4">Similar Items</h3>
-    <div class="row">
-        {% for item in similar_items %}
-            <div class="col-md-3 mb-4">
-                <div class="card h-100">
-                    {% if item.item.image_url %}
-                        <img src="{{ item.item.image_url }}" class="card-img-top" alt="{{ item.item.name }}">
-                    {% else %}
-                        <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 150px;">
-                            <span class="text-muted">No Image</span>
-                        </div>
-                    {% endif %}
-                    <div class="card-body">
-                        <h5 class="card-title">{{ item.title }}</h5>
-                        <p class="card-text">
-                            <strong>Current Price:</strong> ${{ item.current_price }}<br>
-                            <strong>Bids:</strong> {{ item.num_bids }}
-                        </p>
-                    </div>
-                    <div class="card-footer">
-                        <a href="{{ url_for('auction.view', id=item.id) }}" class="btn btn-sm btn-primary w-100">View Auction</a>
-                    </div>
-                </div>
-            </div>
-        {% endfor %}
-    </div>
-{% endif %}
-{% endblock %}
-
-{% block scripts %}
+{% if not is_ended %}
 <script>
-    function toggleAutoBid() {
-        const autoBidSection = document.getElementById('auto_bid_section');
-        const enableAutoBid = document.getElementById('enable_auto_bid');
+document.addEventListener('DOMContentLoaded', function() {
+    const countdownTimer = document.getElementById('countdown-timer');
+    if (!countdownTimer) return;
+    
+    const endTimeStr = countdownTimer.dataset.endTime;
+    const endTime = new Date(endTimeStr + 'Z'); // Force UTC interpretation
+    
+    function updateCountdown() {
+        const now = new Date();
+        const timeLeft = endTime - now;
         
-        if (enableAutoBid.checked) {
-            autoBidSection.style.display = 'block';
-        } else {
-            autoBidSection.style.display = 'none';
+        if (timeLeft <= 0) {
+            countdownTimer.innerHTML = 'Auction has ended';
+            // Reload the page after 100ms to show results
+            setTimeout(() => {
+                window.location.reload();
+            }, 100);
+            return;
         }
+        
+        const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
+        
+        let display = '';
+        if (days > 0) display += `${days}d `;
+        display += `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        
+        countdownTimer.innerHTML = display;
     }
     
-    // Countdown timer
-    document.addEventListener('DOMContentLoaded', function() {
-        const countdownElement = document.getElementById('countdown');
-        if (!countdownElement) return;
+    // Update immediately and then every second
+    updateCountdown();
+    setInterval(updateCountdown, 1000);
+});
+
+// Add socket.io for real-time updates
+const socket = io();
+const auctionId = parseInt("{{ auction.id }}");
+const auctionEndTime = new Date("{{ auction.end_time.isoformat() }}").getTime();
+
+// Join the auction room
+socket.emit('join_auction', { auction_id: auctionId });
+
+// Handle new bids
+socket.on('new_bid', function(data) {
+    // Update bid history
+    const tbody = document.querySelector('.table tbody');
+    if (tbody) {
+        const newRow = document.createElement('tr');
+        newRow.innerHTML = '<td>' + data.bidder + '</td>' +
+                          '<td>$' + data.amount.toFixed(2) + '</td>' +
+                          '<td>' + new Date(data.created_at).toLocaleString() + '</td>' +
+                          '<td>' + (data.is_auto_bid ? 
+                              '<span class="badge bg-info">Auto</span>' : 
+                              '<span class="badge bg-primary">Manual</span>'
+                          ) + '</td>';
+        tbody.insertBefore(newRow, tbody.firstChild);
+    }
+    
+    // Update current price
+    const currentPrice = document.querySelector('.text-primary');
+    if (currentPrice) {
+        currentPrice.textContent = '$' + data.amount.toFixed(2);
+    }
+    
+    // Update number of bids
+    const numBids = document.querySelector('.mb-3 p:first-child');
+    if (numBids) {
+        numBids.textContent = 'Number of bids: ' + data.total_bids;
+    }
+    
+    // Update minimum bid
+    const minBid = document.querySelector('#bid_amount');
+    if (minBid) {
+        const minIncrement = parseFloat("{{ auction.min_increment }}");
+        minBid.setAttribute('min', (data.amount + minIncrement).toFixed(2));
+        minBid.setAttribute('value', minBid.getAttribute('min'));
+    }
+});
+
+// Handle notifications
+socket.on('notification', function(data) {
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = 'alert alert-' + (data.type === 'error' ? 'danger' : 'info') + ' alert-dismissible fade show';
+    notification.innerHTML = '<strong>' + data.title + '</strong>' +
+                           '<p>' + data.message + '</p>' +
+                           '<a href="' + data.link + '" class="btn btn-sm btn-primary">View</a>' +
+                           '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
+    
+    // Add to notifications container
+    const container = document.getElementById('notifications');
+    if (container) {
+        container.appendChild(notification);
         
-        const endTime = new Date('{{ auction.end_time.isoformat() }}').getTime();
+        // Auto-dismiss after 5 seconds
+        setTimeout(function() {
+            notification.remove();
+        }, 5000);
+    }
+});
+
+// Handle auction ended
+socket.on('auction_ended', function(data) {
+    // Show auction ended message
+    const countdown = document.getElementById('countdown-timer');
+    if (countdown) {
+        countdown.innerHTML = 'Auction Ended';
+    }
+    
+    // Update winner information
+    const winnerInfo = document.createElement('div');
+    winnerInfo.className = 'alert alert-info';
+    winnerInfo.innerHTML = data.winner ? 
+        'Winner: ' + data.winner : 
+        'No winner - reserve not met';
+    
+    const statusDiv = document.querySelector('.card-body .mb-3:nth-child(2)');
+    if (statusDiv) {
+        statusDiv.appendChild(winnerInfo);
+    }
+    
+    // Disable bidding form
+    const bidForm = document.querySelector('form[action*="place_bid"]');
+    if (bidForm) {
+        bidForm.style.display = 'none';
+    }
+    
+    // Reload page after 5 seconds
+    setTimeout(function() {
+        location.reload();
+    }, 5000);
+});
+
+// Leave auction room when page is unloaded
+window.addEventListener('beforeunload', function() {
+    socket.emit('leave_auction', { auction_id: auctionId });
+});
+
+// Handle new questions
+socket.on('new_question', function(data) {
+    if (current_user.is_customer_rep) {
+        const notification = document.createElement('div');
+        notification.className = 'alert alert-info alert-dismissible fade show';
+        notification.innerHTML = `
+            <strong>New Question</strong>
+            <p>${data.user} asked a question about "${data.auction_title}"</p>
+            <a href="${data.link}" class="btn btn-sm btn-primary">View Question</a>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
         
-        function updateCountdown() {
-            const now = new Date().getTime();
-            const timeLeft = endTime - now;
-            
-            if (timeLeft <= 0) {
-                countdownElement.textContent = 'Auction ended';
-                location.reload();
-                return;
-            }
-            
-            const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
-            const hours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-            const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
-            const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
-            
-            let countdownText = '';
-            if (days > 0) countdownText += days + 'd ';
-            if (hours > 0 || days > 0) countdownText += hours + 'h ';
-            if (minutes > 0 || hours > 0 || days > 0) countdownText += minutes + 'm ';
-            countdownText += seconds + 's';
-            
-            countdownElement.textContent = countdownText;
+        const container = document.getElementById('notifications');
+        if (container) {
+            container.appendChild(notification);
+            setTimeout(() => notification.remove(), 5000);
         }
+    }
+});
+
+// Handle new answers
+socket.on('new_answer', function(data) {
+    const questionItem = document.querySelector(`[data-question-id="${data.question_id}"]`);
+    if (!questionItem) return;
+
+    // Update question status
+    const statusBadge = questionItem.querySelector('.badge');
+    if (statusBadge) {
+        statusBadge.className = 'badge bg-success';
+        statusBadge.textContent = 'Answered';
+    }
+
+    // Add answer
+    const answerDiv = document.createElement('div');
+    answerDiv.className = 'answer-item mt-3 p-3 bg-light rounded';
+    answerDiv.innerHTML = `
+        <div class="d-flex justify-content-between">
+            <div>
+                <h6 class="mb-1">
+                    ${data.answer.username}
+                    ${data.answer.is_customer_rep ? '<span class="badge bg-info">Customer Representative</span>' : ''}
+                    answered:
+                </h6>
+                <p class="mb-2">${data.answer.text}</p>
+                <small class="text-muted">${new Date(data.answer.created_at).toLocaleString()}</small>
+            </div>
+        </div>
+    `;
+
+    // Remove answer form if it exists
+    const answerForm = questionItem.querySelector('form');
+    if (answerForm) {
+        answerForm.remove();
+    }
+
+    // Add answer to question
+    questionItem.appendChild(answerDiv);
+
+    // Show notification to the user who asked the question
+    if (data.question_user_id === current_user.id) {
+        const notification = document.createElement('div');
+        notification.className = 'alert alert-success alert-dismissible fade show';
+        notification.innerHTML = `
+            <strong>Question Answered</strong>
+            <p>Your question has been answered by ${data.answer.username}</p>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
         
-        updateCountdown();
-        setInterval(updateCountdown, 1000);
-    });
+        const container = document.getElementById('notifications');
+        if (container) {
+            container.appendChild(notification);
+            setTimeout(() => notification.remove(), 5000);
+        }
+    }
+});
+
+// Handle new auctions
+socket.on('new_auction', function(data) {
+    if (current_user.is_customer_rep) {
+        const notification = document.createElement('div');
+        notification.className = 'alert alert-info alert-dismissible fade show';
+        notification.innerHTML = `
+            <strong>New Auction</strong>
+            <p>${data.seller} has posted a new auction: "${data.title}"</p>
+            <a href="${data.link}" class="btn btn-sm btn-primary">View Auction</a>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        const container = document.getElementById('notifications');
+        if (container) {
+            container.appendChild(notification);
+            setTimeout(() => notification.remove(), 5000);
+        }
+    }
+});
 </script>
+{% endif %}
+
+<!-- Add notifications container -->
+<div id="notifications" class="position-fixed top-0 end-0 p-3" style="z-index: 5"></div>
 {% endblock %}

@@ -18,7 +18,7 @@ def seed_data():
         Category.query.delete()
         
         # Keep admin users, delete regular users
-        User.query.filter_by(role='user').delete()
+        User.query.filter_by(is_admin=False, is_customer_rep=False).delete()
         
         # Commit the deletions
         db.session.commit()

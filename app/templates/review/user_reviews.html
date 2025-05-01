@@ -1,0 +1,202 @@
+{% extends "base.html" %}
+
+{% block title %}Reviews for {{ user.username }} - BuyMe{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Reviews for {{ user.username }}</h2>
+    <div>
+        <a href="{{ url_for('user.profile_view', id=user.id) }}" class="btn btn-outline-primary">View Profile</a>
+        <a href="javascript:history.back()" class="btn btn-outline-secondary">Back</a>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="d-flex align-items-center">
+            <h3 class="me-3">{{ avg_rating|round(1) }} / 5</h3>
+            <div class="stars-display">
+                {% for i in range(1, 6) %}
+                    {% if i <= avg_rating|round(0) %}
+                        <span class="text-warning fs-3">★</span>
+                    {% else %}
+                        <span class="text-muted fs-3">★</span>
+                    {% endif %}
+                {% endfor %}
+            </div>
+            <span class="ms-3 text-muted">({{ reviews|length }} reviews)</span>
+        </div>
+        <!-- Rating distribution -->
+        <div class="mt-3">
+            {% for i in range(5, 0, -1) %}
+                {% set count = reviews|selectattr('rating', 'equalto', i)|list|length %}
+                {% set percentage = (count / reviews|length * 100) if reviews|length > 0 else 0 %}
+                <div class="d-flex align-items-center mb-1">
+                    <div style="width: 60px;" class="me-2">
+                        {{ i }} <span class="text-warning">★</span>
+                    </div>
+                    <div class="progress flex-grow-1" style="height: 10px;">
+                        <div
+                          class="progress-bar bg-warning"
+                          role="progressbar"
+                          style="--progress-width: {{ percentage|round(0, 'floor') }}%;"
+                          aria-valuenow="{{ percentage|round(0, 'floor') }}"
+                          aria-valuemin="0"
+                          aria-valuemax="100"
+                        ></div>
+                      </div>                      
+                    <div style="width: 60px;" class="ms-2 text-end">
+                        {{ count }}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+{% if reviews %}
+    <!-- Filter options -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form id="filter-form" class="row g-3">
+                <div class="col-md-4">
+                    <label for="rating-filter" class="form-label">Filter by Rating</label>
+                    <select id="rating-filter" class="form-select" onchange="applyFilters()">
+                        <option value="all">All Ratings</option>
+                        {% for star in range(5, 0, -1) %}
+                            <option value="{{ star }}">{{ star }} {{ 'Stars' if star > 1 else 'Star' }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label for="sort-by" class="form-label">Sort By</label>
+                    <select id="sort-by" class="form-select" onchange="applyFilters()">
+                        <option value="newest">Newest First</option>
+                        <option value="oldest">Oldest First</option>
+                        <option value="highest">Highest Rating</option>
+                        <option value="lowest">Lowest Rating</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label for="comment-filter" class="form-label">Comment</label>
+                    <select id="comment-filter" class="form-select" onchange="applyFilters()">
+                        <option value="all">All Reviews</option>
+                        <option value="with">With Comments</option>
+                        <option value="without">Without Comments</option>
+                    </select>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Reviews list -->
+    <div id="reviews-container">
+        {% for review in reviews %}
+            <div class="card mb-3 review-card"
+                 data-rating="{{ review.rating }}"
+                 data-date="{{ review.created_at.timestamp() }}"
+                 data-has-comment="{{ 'yes' if review.comment else 'no' }}">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>{{ review.reviewer.username }}</strong>
+                            <span class="text-warning">
+                                {% for i in range(1, 6) %}
+                                    {% if i <= review.rating %}★{% else %}☆{% endif %}
+                                {% endfor %}
+                            </span>
+                        </div>
+                        <small class="text-muted">{{ review.created_at.strftime('%b %d, %Y') }}</small>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% if review.comment %}
+                        <p class="card-text">{{ review.comment }}</p>
+                    {% else %}
+                        <p class="text-muted fst-italic">No comment provided</p>
+                    {% endif %}
+                    <small class="text-muted">
+                        For auction: <a href="{{ url_for('auction.view', id=review.auction_id) }}">{{ review.auction.title }}</a>
+                    </small>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+
+    <!-- No results message (initially hidden) -->
+    <div id="no-results-message" class="alert alert-info" style="display: none;">
+        No reviews match your filter criteria. Try adjusting your filters.
+    </div>
+{% else %}
+    <div class="alert alert-info">
+        {{ user.username }} has not received any reviews yet.
+    </div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+    {% if reviews %}
+    <script>
+        function applyFilters() {
+            const container = document.getElementById('reviews-container');
+            if (!container) return;
+
+            const ratingFilter = document.getElementById('rating-filter').value;
+            const sortBy = document.getElementById('sort-by').value;
+            const commentFilter = document.getElementById('comment-filter').value;
+
+            let visibleCount = 0;
+            const reviewCards = container.querySelectorAll('.review-card');
+
+            reviewCards.forEach(card => {
+                const rating = card.getAttribute('data-rating');
+                const hasComment = card.getAttribute('data-has-comment');
+
+                const matchesRating = ratingFilter === 'all' || rating === ratingFilter;
+                const matchesComment = commentFilter === 'all' ||
+                                      (commentFilter === 'with' && hasComment === 'yes') ||
+                                      (commentFilter === 'without' && hasComment === 'no');
+
+                if (matchesRating && matchesComment) {
+                    card.style.display = 'block';
+                    visibleCount++;
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+
+            const noResults = document.getElementById('no-results-message');
+            if (visibleCount === 0) {
+                noResults.style.display = 'block';
+            } else {
+                noResults.style.display = 'none';
+            }
+
+            sortReviews(sortBy);
+        }
+
+        function sortReviews(sortBy) {
+            const container = document.getElementById('reviews-container');
+            const cards = Array.from(container.querySelectorAll('.review-card'))
+                                .filter(card => card.style.display !== 'none');
+
+            cards.sort((a, b) => {
+                if (sortBy === 'newest') {
+                    return parseFloat(b.getAttribute('data-date')) - parseFloat(a.getAttribute('data-date'));
+                } else if (sortBy === 'oldest') {
+                    return parseFloat(a.getAttribute('data-date')) - parseFloat(b.getAttribute('data-date'));
+                } else if (sortBy === 'highest') {
+                    return parseInt(b.getAttribute('data-rating')) - parseInt(a.getAttribute('data-rating'));
+                } else if (sortBy === 'lowest') {
+                    return parseInt(a.getAttribute('data-rating')) - parseInt(b.getAttribute('data-rating'));
+                }
+                return 0;
+            });
+
+            cards.forEach(card => container.appendChild(card));
+        }
+
+        document.addEventListener('DOMContentLoaded', applyFilters);
+    </script>
+    {% endif %}
+{% endblock %}

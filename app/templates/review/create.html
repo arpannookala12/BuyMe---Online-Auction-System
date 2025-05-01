@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+
+{% block title %}Review Seller - BuyMe{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4>Review Seller</h4>
+                </div>
+                <div class="card-body">
+                    <h5>Auction: {{ auction.title }}</h5>
+                    <p class="text-muted">Seller: {{ auction.seller.username }}</p>
+                    
+                    <form method="POST" action="{{ url_for('review.create', auction_id=auction.id) }}">
+                        <div class="mb-3">
+                            <label class="form-label">Rating</label>
+                            <div class="rating">
+                                {% for i in range(5, 0, -1) %}
+                                <input type="radio" name="rating" id="star{{ i }}" value="{{ i }}" required>
+                                <label for="star{{ i }}" class="star-label">★</label>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="comment" class="form-label">Comment (Optional)</label>
+                            <textarea class="form-control" id="comment" name="comment" rows="4"></textarea>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary">Submit Review</button>
+                        <a href="{{ url_for('auction.view', id=auction.id) }}" class="btn btn-secondary">Cancel</a>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.rating {
+    display: flex;
+    flex-direction: row-reverse;
+    justify-content: flex-end;
+    gap: 5px;
+}
+
+.rating input {
+    display: none;
+}
+
+.rating label {
+    font-size: 2rem;
+    color: #ddd;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.rating label:hover,
+.rating label:hover ~ label,
+.rating input:checked ~ label {
+    color: #ffd700;
+}
+
+.rating input:checked + label {
+    color: #ffd700;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const stars = document.querySelectorAll('.rating input');
+    const labels = document.querySelectorAll('.rating label');
+    
+    stars.forEach((star, index) => {
+        star.addEventListener('change', function() {
+            // Reset all stars
+            labels.forEach(label => label.style.color = '#ddd');
+            
+            // Highlight selected star and all stars before it
+            for (let i = 0; i <= index; i++) {
+                labels[i].style.color = '#ffd700';
+            }
+        });
+        
+        // Add hover effect
+        star.addEventListener('mouseover', function() {
+            // Reset all stars
+            labels.forEach(label => label.style.color = '#ddd');
+            
+            // Highlight hovered star and all stars before it
+            for (let i = 0; i <= index; i++) {
+                labels[i].style.color = '#ffd700';
+            }
+        });
+    });
+    
+    // Reset stars when mouse leaves the rating area
+    document.querySelector('.rating').addEventListener('mouseleave', function() {
+        const checkedStar = document.querySelector('.rating input:checked');
+        if (checkedStar) {
+            const index = Array.from(stars).indexOf(checkedStar);
+            labels.forEach((label, i) => {
+                label.style.color = i <= index ? '#ffd700' : '#ddd';
+            });
+        } else {
+            labels.forEach(label => label.style.color = '#ddd');
+        }
+    });
+});
+</script>
+{% endblock %}

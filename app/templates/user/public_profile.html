@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+
+{% block title %}{{ user.username }}'s Profile - BuyMe{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h3>{{ user.username }}</h3>
+            </div>
+            <div class="card-body">
+                <p><strong>Member Since:</strong> {{ user.created_at.strftime('%b %d, %Y') }}</p>
+                
+                <!-- Display seller rating -->
+                {% if avg_rating %}
+                    <div class="mb-3">
+                        <h5>Seller Rating</h5>
+                        <div class="d-flex align-items-center">
+                            <h4 class="me-2">{{ avg_rating|round(1) }}/5</h4>
+                            <div class="text-warning">
+                                {% for i in range(1, 6) %}
+                                    {% if i <= avg_rating|round(0) %}
+                                        ★
+                                    {% else %}
+                                        ☆
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <a href="{{ url_for('review.user_reviews', user_id=user.id) }}" class="btn btn-sm btn-outline-primary mt-2">
+                            See all {{ reviews|length }} reviews
+                        </a>
+                    </div>
+                {% else %}
+                    <p class="text-muted">No ratings yet</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-8">
+        <!-- Recent auctions by this user -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h3>Recent Auctions</h3>
+            </div>
+            <div class="card-body">
+                {% if recent_auctions %}
+                    <div class="list-group">
+                        {% for auction in recent_auctions %}
+                            <a href="{{ url_for('auction.view', id=auction.id) }}" class="list-group-item list-group-item-action">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h5 class="mb-1">{{ auction.title }}</h5>
+                                    <small class="text-muted">{{ auction.created_at.strftime('%b %d, %Y') }}</small>
+                                </div>
+                                <p class="mb-1">${{ auction.current_price }} | {{ auction.num_bids }} bids</p>
+                                <small>
+                                    {% if auction.end_time <= now() %}
+                                        <span class="badge bg-secondary">Ended</span>
+                                    {% else %}
+                                        <span class="badge bg-success">Active</span>
+                                    {% endif %}
+                                </small>
+                            </a>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted">No recent auctions</p>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Recent reviews -->
+        <div class="card">
+            <div class="card-header">
+                <h3>Recent Reviews</h3>
+            </div>
+            <div class="card-body">
+                {% if reviews %}
+                    {% for review in reviews %}
+                        <div class="card mb-3">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <strong>{{ review.reviewer.username }}</strong>
+                                        <span class="text-warning">
+                                            {% for i in range(1, 6) %}
+                                                {% if i <= review.rating %}
+                                                    ★
+                                                {% else %}
+                                                    ☆
+                                                {% endif %}
+                                            {% endfor %}
+                                        </span>
+                                    </div>
+                                    <small class="text-muted">{{ review.created_at.strftime('%b %d, %Y') }}</small>
+                                </div>
+                                {% if review.comment %}
+                                    <p class="mt-2 mb-0">{{ review.comment }}</p>
+                                {% endif %}
+                                <small class="text-muted">
+                                    For auction: <a href="{{ url_for('auction.view', id=review.auction_id) }}">{{ review.auction.title }}</a>
+                                </small>
+                            </div>
+                        </div>
+                    {% endfor %}
+                    
+                    {% if reviews|length > 3 %}
+                        <div class="text-center">
+                            <a href="{{ url_for('review.user_reviews', user_id=user.id) }}" class="btn btn-outline-primary">View All Reviews</a>
+                        </div>
+                    {% endif %}
+                {% else %}
+                    <p class="text-muted">No reviews yet</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

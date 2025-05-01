@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <div class="card">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h2 class="mb-0">Bid History - {{ auction.title }}</h2>
+                        <a href="{{ url_for('auction.view', id=auction.id) }}" class="btn btn-outline-primary">
+                            Back to Auction
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- Auction Summary -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h5>Auction Details</h5>
+                            <p><strong>Current Price:</strong> ${{ "%.2f"|format(auction.current_price) }}</p>
+                            <p><strong>Number of Bids:</strong> {{ auction.num_bids }}</p>
+                            <p><strong>Status:</strong> 
+                                <span class="badge {% if auction.is_ended %}bg-danger{% else %}bg-success{% endif %}">
+                                    {% if auction.is_ended %}Ended{% else %}Active{% endif %}
+                                </span>
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            <h5>Time Information</h5>
+                            <p><strong>Started:</strong> {{ auction.start_time.strftime('%Y-%m-%d %H:%M') }}</p>
+                            <p><strong>Ends:</strong> {{ auction.end_time.strftime('%Y-%m-%d %H:%M') }}</p>
+                            {% if auction.winner %}
+                            <p><strong>Winner:</strong> {{ auction.winner.username }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <!-- Bid History Table -->
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Bidder</th>
+                                    <th>Amount</th>
+                                    <th>Time</th>
+                                    <th>Type</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for bid in bids %}
+                                <tr>
+                                    <td>
+                                        {% if current_user.is_authenticated and bid.bidder_id == current_user.id %}
+                                        <strong>You</strong>
+                                        {% else %}
+                                        {{ bid.bidder.username }}
+                                        {% endif %}
+                                    </td>
+                                    <td>${{ "%.2f"|format(bid.amount) }}</td>
+                                    <td>{{ bid.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                                    <td>
+                                        {% if bid.is_auto_bid %}
+                                        <span class="badge bg-info">Auto</span>
+                                        {% else %}
+                                        <span class="badge bg-primary">Manual</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if bid.is_winning_bid %}
+                                        <span class="badge bg-success">Winning</span>
+                                        {% elif auction.is_ended %}
+                                        <span class="badge bg-secondary">Outbid</span>
+                                        {% else %}
+                                        <span class="badge bg-warning">Outbid</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    {% if not bids %}
+                    <div class="alert alert-info">
+                        No bids have been placed on this auction yet.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block title %}{{ question.title }} - BuyMe Support{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Question Details</h2>
+    <div>
+        <a href="{{ url_for('question.browse') }}" class="btn btn-outline-primary">Back to Questions</a>
+        {% if current_user.is_authenticated and current_user.id == question.user_id %}
+            <a href="{{ url_for('question.my_questions') }}" class="btn btn-outline-success">My Questions</a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <h3>{{ question.title }}</h3>
+            <span class="badge {% if question.status == 'open' %}bg-info{% elif question.status == 'answered' %}bg-success{% else %}bg-secondary{% endif %}">
+                {{ question.status|capitalize }}
+            </span>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="mb-3">
+            {{ question.content|nl2br }}
+        </div>
+        <div class="d-flex justify-content-between">
+            <div>
+                <small class="text-muted">Asked by: {{ question.user.username }}</small>
+            </div>
+            <div>
+                <small class="text-muted">Posted: {{ question.created_at.strftime('%b %d, %Y %I:%M %p') }}</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Answers -->
+<h3>{{ answers|length }} Answer{% if answers|length != 1 %}s{% endif %}</h3>
+
+{% if answers %}
+    {% for answer in answers %}
+        <div class="card mb-3">
+            <div class="card-body">
+                <div class="mb-3">
+                    {{ answer.content|nl2br }}
+                </div>
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <small class="text-muted">Answered by: {{ answer.rep.username }} (Customer Representative)</small>
+                    </div>
+                    <div>
+                        <small class="text-muted">Posted: {{ answer.created_at.strftime('%b %d, %Y %I:%M %p') }}</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endfor %}
+{% endif %}
+
+<!-- Answer form for customer representatives -->
+{% if current_user.is_authenticated and (current_user.is_customer_rep() or current_user.is_admin()) and question.status != 'closed' %}
+    <div class="card mt-4">
+        <div class="card-header">
+            <h3>Post Your Answer</h3>
+        </div>
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('question.answer_question', id=question.id) }}">
+                <div class="mb-3">
+                    <textarea class="form-control" id="content" name="content" rows="6" required></textarea>
+                </div>
+                <div class="d-grid">
+                    <button type="submit" class="btn btn-primary">Post Answer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+{% endif %}
+{% endblock %}

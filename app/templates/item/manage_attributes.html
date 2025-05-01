@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Attributes - {{ category.name }} - BuyMe{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>Manage Attributes - {{ category.name }}</h2>
+                <a href="{{ url_for('item.manage_types') }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> Back to Item Types
+                </a>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h4 class="mb-0">Add New Attribute</h4>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('item.manage_attributes', id=category.id) }}">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label for="name" class="form-label">Name</label>
+                                    <input type="text" class="form-control" id="name" name="name" required>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label for="data_type" class="form-label">Data Type</label>
+                                    <select class="form-select" id="data_type" name="data_type" required>
+                                        <option value="string">Text</option>
+                                        <option value="integer">Number</option>
+                                        <option value="decimal">Decimal</option>
+                                        <option value="date">Date</option>
+                                        <option value="enum">Multiple Choice</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label for="enum_values" class="form-label">Options (for Multiple Choice)</label>
+                                    <input type="text" class="form-control" id="enum_values" name="enum_values" 
+                                           placeholder="Comma-separated values">
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <div class="form-check mt-4">
+                                        <input class="form-check-input" type="checkbox" id="required" name="required" value="true">
+                                        <label class="form-check-label" for="required">
+                                            Required Field
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary">Add Attribute</button>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">Current Attributes</h4>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Data Type</th>
+                                    <th>Required</th>
+                                    <th>Options</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for attr in category.attributes %}
+                                <tr>
+                                    <td>{{ attr.name }}</td>
+                                    <td>{{ attr.data_type }}</td>
+                                    <td>
+                                        {% if attr.required %}
+                                        <span class="badge bg-success">Yes</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">No</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ attr.enum_values if attr.data_type == 'enum' else '-' }}</td>
+                                    <td>
+                                        <form method="POST" action="{{ url_for('item.delete_attribute', id=attr.id) }}" 
+                                              class="d-inline" onsubmit="return confirm('Are you sure?');">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                <i class="bi bi-trash"></i> Delete
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('data_type').addEventListener('change', function() {
+    const enumValuesInput = document.getElementById('enum_values');
+    if (this.value === 'enum') {
+        enumValuesInput.required = true;
+        enumValuesInput.disabled = false;
+    } else {
+        enumValuesInput.required = false;
+        enumValuesInput.disabled = true;
+    }
+});
+</script>
+{% endblock %} 

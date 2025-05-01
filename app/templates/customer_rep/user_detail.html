@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+
+{% block title %}{{ user.username }} - User Details - BuyMe{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col">
+            <h2>User Details</h2>
+            <a href="{{ url_for('customer_rep.list_users') }}" class="btn btn-outline-secondary">Back to Users</a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Basic Information</h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row">
+                        <dt class="col-sm-4">Username</dt>
+                        <dd class="col-sm-8">{{ user.username }}</dd>
+
+                        <dt class="col-sm-4">Email</dt>
+                        <dd class="col-sm-8">{{ user.email }}</dd>
+
+                        <dt class="col-sm-4">Name</dt>
+                        <dd class="col-sm-8">{{ user.first_name }} {{ user.last_name }}</dd>
+
+                        <dt class="col-sm-4">Role</dt>
+                        <dd class="col-sm-8">
+                            {% if user.is_admin %}
+                                <span class="badge bg-danger">Admin</span>
+                            {% elif user.is_customer_rep %}
+                                <span class="badge bg-success">Customer Rep</span>
+                            {% else %}
+                                <span class="badge bg-primary">User</span>
+                            {% endif %}
+                        </dd>
+
+                        <dt class="col-sm-4">Joined</dt>
+                        <dd class="col-sm-8">{{ user.created_at.strftime('%b %d, %Y') }}</dd>
+
+                        <dt class="col-sm-4">Status</dt>
+                        <dd class="col-sm-8">
+                            {% if user.is_active %}
+                                <span class="badge bg-success">Active</span>
+                            {% else %}
+                                <span class="badge bg-danger">Disabled</span>
+                            {% endif %}
+                        </dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Actions</h5>
+                </div>
+                <div class="card-body">
+                    {% if user.is_active %}
+                        <form action="{{ url_for('customer_rep.disable_user', id=user.id) }}" method="post" class="d-inline">
+                            <button type="submit" class="btn btn-danger">Disable User</button>
+                        </form>
+                    {% else %}
+                        <form action="{{ url_for('customer_rep.enable_user', id=user.id) }}" method="post" class="d-inline">
+                            <button type="submit" class="btn btn-success">Enable User</button>
+                        </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Auctions</h5>
+                </div>
+                <div class="card-body">
+                    {% if auctions %}
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Title</th>
+                                        <th>Status</th>
+                                        <th>End Time</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for auction in auctions %}
+                                        <tr>
+                                            <td>{{ auction.title }}</td>
+                                            <td>
+                                                {% if auction.is_active %}
+                                                    <span class="badge bg-success">Active</span>
+                                                {% else %}
+                                                    <span class="badge bg-secondary">Ended</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>{{ auction.end_time.strftime('%b %d, %Y %H:%M') }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted">No auctions found.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Bids</h5>
+                </div>
+                <div class="card-body">
+                    {% if bids %}
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Auction</th>
+                                        <th>Amount</th>
+                                        <th>Time</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for bid in bids %}
+                                        <tr>
+                                            <td>{{ bid.auction.title }}</td>
+                                            <td>${{ "%.2f"|format(bid.amount) }}</td>
+                                            <td>{{ bid.created_at.strftime('%b %d, %Y %H:%M') }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted">No bids found.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Questions</h5>
+                </div>
+                <div class="card-body">
+                    {% if questions %}
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Question</th>
+                                        <th>Time</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for question in questions %}
+                                        <tr>
+                                            <td>{{ question.question_text }}</td>
+                                            <td>{{ question.created_at.strftime('%b %d, %Y %H:%M') }}</td>
+                                            <td>
+                                                {% if question.answer %}
+                                                    <span class="badge bg-success">Answered</span>
+                                                {% else %}
+                                                    <span class="badge bg-warning">Pending</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted">No questions found.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

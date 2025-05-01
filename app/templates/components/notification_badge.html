@@ -1,0 +1,12 @@
+{% if current_user.is_authenticated %}
+    {% set unread_count = current_user.unread_notification_count() %}
+    <a href="{{ url_for('notification.list') }}" class="nav-link position-relative">
+        <i class="bi bi-bell"></i>
+        {% if unread_count > 0 %}
+            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                {{ unread_count }}
+                <span class="visually-hidden">unread notifications</span>
+            </span>
+        {% endif %}
+    </a>
+{% endif %} 

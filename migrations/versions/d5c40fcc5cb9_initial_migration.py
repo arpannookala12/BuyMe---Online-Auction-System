@@ -1,8 +1,8 @@
 """Initial migration
 
-Revision ID: 902a94b8aa66
+Revision ID: d5c40fcc5cb9
 Revises: 
-Create Date: 2025-04-21 18:09:14.716654
+Create Date: 2025-04-30 18:18:55.012639
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '902a94b8aa66'
+revision = 'd5c40fcc5cb9'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -30,7 +30,7 @@ def upgrade():
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('username', sa.String(length=64), nullable=False),
     sa.Column('email', sa.String(length=120), nullable=False),
-    sa.Column('password_hash', sa.String(length=128), nullable=False),
+    sa.Column('password_hash', sa.String(length=256), nullable=False),
     sa.Column('first_name', sa.String(length=64), nullable=True),
     sa.Column('last_name', sa.String(length=64), nullable=True),
     sa.Column('address', sa.String(length=256), nullable=True),
@@ -56,15 +56,55 @@ def upgrade():
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
+    op.create_table('category_attributes',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('category_id', sa.Integer(), nullable=False),
+    sa.Column('name', sa.String(length=64), nullable=False),
+    sa.Column('display_name', sa.String(length=64), nullable=False),
+    sa.Column('attribute_type', sa.String(length=32), nullable=False),
+    sa.Column('required', sa.Boolean(), nullable=True),
+    sa.Column('options', sa.Text(), nullable=True),
+    sa.ForeignKeyConstraint(['category_id'], ['categories.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
     op.create_table('items',
     sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('name', sa.String(length=128), nullable=False),
+    sa.Column('name', sa.String(length=100), nullable=False),
     sa.Column('description', sa.Text(), nullable=True),
     sa.Column('category_id', sa.Integer(), nullable=False),
-    sa.Column('image_url', sa.String(length=256), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.Column('attributes', sa.Text(), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.ForeignKeyConstraint(['category_id'], ['categories.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_table('notifications',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('user_id', sa.Integer(), nullable=False),
+    sa.Column('type', sa.String(length=50), nullable=False),
+    sa.Column('message', sa.String(length=255), nullable=False),
+    sa.Column('reference_id', sa.Integer(), nullable=True),
+    sa.Column('is_read', sa.Boolean(), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=True),
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_table('questions',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('user_id', sa.Integer(), nullable=False),
+    sa.Column('question_text', sa.Text(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), nullable=True),
+    sa.Column('is_answered', sa.Boolean(), nullable=True),
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_table('answers',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('question_id', sa.Integer(), nullable=False),
+    sa.Column('user_id', sa.Integer(), nullable=False),
+    sa.Column('answer_text', sa.Text(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), nullable=True),
+    sa.ForeignKeyConstraint(['question_id'], ['questions.id'], ),
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('auctions',
@@ -80,8 +120,21 @@ def upgrade():
     sa.Column('end_time', sa.DateTime(), nullable=False),
     sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.Column('is_active', sa.Boolean(), nullable=True),
+    sa.Column('winner_id', sa.Integer(), nullable=True),
+    sa.Column('winner_notified', sa.Boolean(), nullable=True),
     sa.ForeignKeyConstraint(['item_id'], ['items.id'], ),
     sa.ForeignKeyConstraint(['seller_id'], ['users.id'], ),
+    sa.ForeignKeyConstraint(['winner_id'], ['users.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_table('wishlists',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('user_id', sa.Integer(), nullable=False),
+    sa.Column('item_id', sa.Integer(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), nullable=True),
+    sa.Column('notes', sa.Text(), nullable=True),
+    sa.ForeignKeyConstraint(['item_id'], ['items.id'], ),
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('bids',
@@ -91,8 +144,22 @@ def upgrade():
     sa.Column('amount', sa.Float(), nullable=False),
     sa.Column('auto_bid_limit', sa.Float(), nullable=True),
     sa.Column('created_at', sa.DateTime(), nullable=True),
+    sa.Column('is_auto_bid', sa.Boolean(), nullable=True),
     sa.ForeignKeyConstraint(['auction_id'], ['auctions.id'], ),
     sa.ForeignKeyConstraint(['bidder_id'], ['users.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_table('reviews',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('auction_id', sa.Integer(), nullable=False),
+    sa.Column('reviewer_id', sa.Integer(), nullable=False),
+    sa.Column('seller_id', sa.Integer(), nullable=False),
+    sa.Column('rating', sa.Integer(), nullable=False),
+    sa.Column('comment', sa.Text(), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=True),
+    sa.ForeignKeyConstraint(['auction_id'], ['auctions.id'], ),
+    sa.ForeignKeyConstraint(['reviewer_id'], ['users.id'], ),
+    sa.ForeignKeyConstraint(['seller_id'], ['users.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
     # ### end Alembic commands ###
@@ -100,9 +167,15 @@ def upgrade():
 
 def downgrade():
     # ### commands auto generated by Alembic - please adjust! ###
+    op.drop_table('reviews')
     op.drop_table('bids')
+    op.drop_table('wishlists')
     op.drop_table('auctions')
+    op.drop_table('answers')
+    op.drop_table('questions')
+    op.drop_table('notifications')
     op.drop_table('items')
+    op.drop_table('category_attributes')
     op.drop_table('alerts')
     with op.batch_alter_table('users', schema=None) as batch_op:
         batch_op.drop_index(batch_op.f('ix_users_username'))

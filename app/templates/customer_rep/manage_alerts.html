@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Manage User Alerts</h1>
+        <a href="{{ url_for('customer_rep.list_users') }}" class="btn btn-secondary">Back to Users</a>
+    </div>
+
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Alert Statistics</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table">
+                        <tr>
+                            <th>Total Alerts:</th>
+                            <td>{{ alerts|length }}</td>
+                        </tr>
+                        <tr>
+                            <th>Active Alerts:</th>
+                            <td>{{ alerts|selectattr('is_active', 'equalto', true)|list|length }}</td>
+                        </tr>
+                        <tr>
+                            <th>Triggered Alerts:</th>
+                            <td>{{ alerts|selectattr('last_triggered', 'defined')|list|length }}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Create New Alert</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('customer_rep.create_alert', user_id=user.id) }}">
+                        <div class="mb-3">
+                            <label for="category" class="form-label">Category</label>
+                            <select class="form-select" id="category" name="category" required>
+                                <option value="">Select Category</option>
+                                {% for category in categories %}
+                                <option value="{{ category.id }}">{{ category.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="min_price" class="form-label">Minimum Price</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" class="form-control" id="min_price" name="min_price" step="0.01" min="0">
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="max_price" class="form-label">Maximum Price</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" class="form-control" id="max_price" name="max_price" step="0.01" min="0">
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="keywords" class="form-label">Keywords</label>
+                            <input type="text" class="form-control" id="keywords" name="keywords" placeholder="Enter keywords separated by commas">
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="is_active" name="is_active" checked>
+                                <label class="form-check-label" for="is_active">
+                                    Active
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary">Create Alert</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">User's Alerts</h5>
+                </div>
+                <div class="card-body">
+                    {% if alerts %}
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Category</th>
+                                    <th>Price Range</th>
+                                    <th>Keywords</th>
+                                    <th>Status</th>
+                                    <th>Last Triggered</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for alert in alerts %}
+                                <tr>
+                                    <td>{{ alert.category.name }}</td>
+                                    <td>
+                                        {% if alert.min_price and alert.max_price %}
+                                            ${{ "%.2f"|format(alert.min_price) }} - ${{ "%.2f"|format(alert.max_price) }}
+                                        {% elif alert.min_price %}
+                                            > ${{ "%.2f"|format(alert.min_price) }}
+                                        {% elif alert.max_price %}
+                                            < ${{ "%.2f"|format(alert.max_price) }}
+                                        {% else %}
+                                            Any
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ alert.keywords or 'None' }}</td>
+                                    <td>
+                                        {% if alert.is_active %}
+                                        <span class="badge bg-success">Active</span>
+                                        {% else %}
+                                        <span class="badge bg-danger">Inactive</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if alert.last_triggered %}
+                                        {{ alert.last_triggered.strftime('%Y-%m-%d %H:%M:%S') }}
+                                        {% else %}
+                                        Never
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group">
+                                            {% if alert.is_active %}
+                                            <form method="POST" action="{{ url_for('customer_rep.deactivate_alert', alert_id=alert.id) }}" class="d-inline">
+                                                <button type="submit" class="btn btn-sm btn-warning">Deactivate</button>
+                                            </form>
+                                            {% else %}
+                                            <form method="POST" action="{{ url_for('customer_rep.activate_alert', alert_id=alert.id) }}" class="d-inline">
+                                                <button type="submit" class="btn btn-sm btn-success">Activate</button>
+                                            </form>
+                                            {% endif %}
+                                            <form method="POST" action="{{ url_for('customer_rep.delete_alert', alert_id=alert.id) }}" class="d-inline"
+                                                  onsubmit="return confirm('Are you sure you want to delete this alert?');">
+                                                <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">
+                        No alerts found for this user.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Validate price range
+    const minPrice = document.getElementById('min_price');
+    const maxPrice = document.getElementById('max_price');
+
+    function validatePriceRange() {
+        if (minPrice.value && maxPrice.value) {
+            if (parseFloat(minPrice.value) > parseFloat(maxPrice.value)) {
+                maxPrice.setCustomValidity('Maximum price must be greater than minimum price');
+            } else {
+                maxPrice.setCustomValidity('');
+            }
+        } else {
+            maxPrice.setCustomValidity('');
+        }
+    }
+
+    minPrice.addEventListener('input', validatePriceRange);
+    maxPrice.addEventListener('input', validatePriceRange);
+});
+</script>
+{% endblock %}
+{% endblock %} 

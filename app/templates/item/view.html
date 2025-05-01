@@ -118,6 +118,16 @@
         </div>
     </div>
 </div>
+<!-- Add this button to the item view page where appropriate -->
+<div class="mb-3">
+    <form method="POST" action="{{ url_for('wishlist.toggle', item_id=item.id) }}">
+        {% set in_wishlist = current_user.is_authenticated and item.wishlist_entries.filter_by(user_id=current_user.id).first() %}
+        <button type="submit" class="btn {{ 'btn-danger' if in_wishlist else 'btn-outline-primary' }}">
+            <i class="bi {{ 'bi-heart-fill' if in_wishlist else 'bi-heart' }}"></i>
+            {{ 'Remove from Wishlist' if in_wishlist else 'Add to Wishlist' }}
+        </button>
+    </form>
+</div>
 {% endblock %}
 
 {% block scripts %}

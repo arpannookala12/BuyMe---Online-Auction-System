@@ -6,9 +6,12 @@
     <title>{% block title %}BuyMe Auction System{% endblock %}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.6.0/socket.io.js" defer></script>
+    <script src="{{ url_for('static', filename='js/socket-client.js') }}" defer></script>
     {% block styles %}{% endblock %}
 </head>
-<body>
+<body {% if current_user.is_authenticated %}data-user-id="{{ current_user.id }}"{% endif %}>
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
         <div class="container">
             <a class="navbar-brand" href="{{ url_for('main.index') }}">BuyMe</a>
@@ -43,11 +46,12 @@
                                 <li><a class="dropdown-item" href="{{ url_for('user.my_auctions') }}">My Auctions</a></li>
                                 <li><a class="dropdown-item" href="{{ url_for('user.my_bids') }}">My Bids</a></li>
                                 <li><a class="dropdown-item" href="{{ url_for('alert.manage') }}">My Alerts</a></li>
-                                {% if current_user.is_customer_rep() %}
+                                <li><a class="dropdown-item" href="{{ url_for('wishlist.view') }}">My Wishlist</a></li>
+                                {% if current_user.is_customer_rep %}
                                     <li><hr class="dropdown-divider"></li>
                                     <li><a class="dropdown-item" href="{{ url_for('customer_rep.dashboard') }}">Rep Dashboard</a></li>
                                 {% endif %}
-                                {% if current_user.is_admin() %}
+                                {% if current_user.is_admin %}
                                     <li><hr class="dropdown-divider"></li>
                                     <li><a class="dropdown-item" href="{{ url_for('admin.dashboard') }}">Admin Dashboard</a></li>
                                 {% endif %}
@@ -67,8 +71,10 @@
             </div>
         </div>
     </nav>
-
     <div class="container mt-4">
+        <!-- Add global notification area -->
+        <div id="global-notifications" class="position-fixed top-0 end-0 p-3" style="z-index: 5"></div>
+        
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}

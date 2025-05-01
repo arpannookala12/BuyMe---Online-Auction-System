@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}Ask a Question - BuyMe{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h2>Ask a Question</h2>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('question.ask_question') }}">
+                    <div class="mb-3">
+                        <label for="title" class="form-label">Question Title</label>
+                        <input type="text" class="form-control" id="title" name="title" required
+                               placeholder="e.g., How do I cancel a bid?">
+                        <div class="form-text">Be specific and imagine you're asking a person</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="content" class="form-label">Details</label>
+                        <textarea class="form-control" id="content" name="content" rows="6" required
+                                  placeholder="Explain your question in detail..."></textarea>
+                        <div class="form-text">Include all the information someone would need to answer your question</div>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">Submit Question</button>
+                        <a href="{{ url_for('question.index') }}" class="btn btn-outline-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

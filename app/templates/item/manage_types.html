@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Item Types - BuyMe{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>Manage Item Types</h2>
+                <a href="{{ url_for('item.create_type') }}" class="btn btn-primary">
+                    <i class="bi bi-plus-lg"></i> New Item Type
+                </a>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Description</th>
+                                    <th>Parent Category</th>
+                                    <th>Attributes</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for category in categories %}
+                                <tr>
+                                    <td>{{ category.name }}</td>
+                                    <td>{{ category.description }}</td>
+                                    <td>{{ category.parent.name if category.parent else '-' }}</td>
+                                    <td>
+                                        {% for attr in category.attributes %}
+                                        <span class="badge bg-info">{{ attr.name }}</span>
+                                        {% endfor %}
+                                    </td>
+                                    <td>
+                                        <a href="{{ url_for('item.manage_attributes', id=category.id) }}" 
+                                           class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-gear"></i> Attributes
+                                        </a>
+                                        <form method="POST" action="{{ url_for('item.delete_type', id=category.id) }}" 
+                                              class="d-inline" onsubmit="return confirm('Are you sure?');">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                <i class="bi bi-trash"></i> Delete
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

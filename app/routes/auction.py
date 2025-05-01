@@ -1,57 +1,82 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request, abort
+from flask import Blueprint, render_template, redirect, url_for, flash, request, abort, jsonify
 from flask_login import login_required, current_user
-from app import db
-from app.models import Auction, Item, Bid, Category, Alert, User
+from app import db, socketio
+from app.models import Auction, Item, Bid, Category, Alert, User, Question, Answer, Review
+from app.models.notification import Notification
 from datetime import datetime, timedelta
+from sqlalchemy import func, and_, or_
+from app.tasks import send_notification_email
+from werkzeug.utils import secure_filename
+import os
+from flask import current_app
+from flask_socketio import emit
+import json
 
 auction_bp = Blueprint('auction', __name__, url_prefix='/auction')
 
+def allowed_file(filename):
+    """Check if the file extension is allowed."""
+    ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def ensure_upload_folder():
+    """Ensure the upload folder exists."""
+    upload_folder = os.path.join(current_app.root_path, 'static', 'uploads')
+    if not os.path.exists(upload_folder):
+        os.makedirs(upload_folder)
+    return upload_folder
+
 @auction_bp.route('/browse')
 def browse():
+    """Browse and filter auctions with pagination."""
     # Get filters from query parameters
     category_id = request.args.get('category_id', type=int)
     min_price = request.args.get('min_price', type=float)
     max_price = request.args.get('max_price', type=float)
     status = request.args.get('status', 'active')
     sort_by = request.args.get('sort', 'end_time_asc')
+    search_query = request.args.get('q', '')
     
-    # Base query
+    # Base query and current time
     current_time = datetime.utcnow()
     query = Auction.query
     
-    # Apply filters
+    # Search query
+    if search_query:
+        query = query.join(Item).filter(
+            or_(
+                Auction.title.ilike(f'%{search_query}%'),
+                Auction.description.ilike(f'%{search_query}%'),
+                Item.name.ilike(f'%{search_query}%'),
+                Item.description.ilike(f'%{search_query}%')
+            )
+        )
+    
+    # Category and subcategories filter
     if category_id:
         category = Category.query.get_or_404(category_id)
-        # Get all subcategory IDs
-        category_ids = [category_id]
-        
-        def get_subcategory_ids(cat_id):
-            subcats = Category.query.filter_by(parent_id=cat_id).all()
-            for subcat in subcats:
-                category_ids.append(subcat.id)
-                get_subcategory_ids(subcat.id)
-        
-        get_subcategory_ids(category_id)
-        
-        # Filter by all categories and subcategories
+        category_ids = [category.id]
+        def get_subcats(cat):
+            for sub in Category.query.filter_by(parent_id=cat.id).all():
+                category_ids.append(sub.id)
+                get_subcats(sub)
+        get_subcats(category)
         query = query.join(Item).filter(Item.category_id.in_(category_ids))
     
+    # Price filters
     if min_price is not None:
         query = query.filter(Auction.initial_price >= min_price)
-    
     if max_price is not None:
         query = query.filter(Auction.initial_price <= max_price)
         
-    # Apply status filter
+    # Status filter
     if status == 'active':
-        query = query.filter(Auction.is_active == True, 
-                            Auction.end_time > current_time)
+        query = query.filter(Auction.is_active == True, Auction.end_time > current_time)
     elif status == 'ended':
         query = query.filter(Auction.end_time <= current_time)
-    elif status == 'all':
-        pass  # No additional filtering
+    # 'all' shows everything
     
-    # Apply sorting
+    # Sorting
     if sort_by == 'end_time_asc':
         query = query.order_by(Auction.end_time.asc())
     elif sort_by == 'end_time_desc':
@@ -68,219 +93,508 @@ def browse():
     per_page = 16
     auctions = query.paginate(page=page, per_page=per_page, error_out=False)
     
-    # Get all top-level categories for filter sidebar
+    # Top-level categories for sidebar
     categories = Category.query.filter_by(parent_id=None).all()
     
-    return render_template('auction/browse.html', 
-                          auctions=auctions,
-                          categories=categories,
-                          category_id=category_id,
-                          min_price=min_price,
-                          max_price=max_price,
-                          status=status,
-                          sort_by=sort_by)
+    return render_template('auction/browse.html', auctions=auctions,
+                           categories=categories, category_id=category_id,
+                           min_price=min_price, max_price=max_price,
+                           status=status, sort_by=sort_by,
+                           search_query=search_query)
 
 @auction_bp.route('/create', methods=['GET', 'POST'])
 @login_required
 def create():
+    """Create a new auction and its associated item."""
     if request.method == 'POST':
         # Get form data
         title = request.form.get('title')
         description = request.form.get('description')
-        category_id = request.form.get('category_id', type=int)
-        initial_price = request.form.get('initial_price', type=float)
-        min_increment = request.form.get('min_increment', type=float)
-        secret_min_price = request.form.get('secret_min_price', type=float)
-        duration_days = request.form.get('duration_days', type=int)
+        category_id = request.form.get('category_id')
+        initial_price = float(request.form.get('initial_price'))
+        min_bid_increment = float(request.form.get('min_increment'))
+        reserve_price = float(request.form.get('secret_min_price', 0))
+        duration_value = int(request.form.get('duration_value'))
+        duration_unit = request.form.get('duration_unit')
         
-        # Form validation
-        if not all([title, description, category_id, initial_price, min_increment, duration_days]):
-            flash('All fields are required', 'danger')
-            categories = Category.query.all()
-            return render_template('auction/create.html', categories=categories)
-        
-        if secret_min_price < initial_price:
-            flash('Secret minimum price must be at least the initial price', 'danger')
-            categories = Category.query.all()
-            return render_template('auction/create.html', categories=categories)
-        
-        # Create item
-        item_name = request.form.get('item_name', title)  # Use title as item name if not provided
-        item = Item(name=item_name, description=description, category_id=category_id)
-        
-        # Get custom attributes based on category
-        category = Category.query.get(category_id)
+        # Get all attributes (both required and custom)
         attributes = {}
-        # In a real app, you would dynamically get the attributes for this category
-        # For now, we'll just use any attribute_ prefixed form fields
+        
+        # Add required attributes
         for key, value in request.form.items():
             if key.startswith('attribute_') and value:
-                attr_name = key[10:]  # Remove 'attribute_' prefix
-                attributes[attr_name] = value
+                attr_name = key.replace('attribute_', '')
+                attributes[attr_name] = value.strip()
         
-        item.set_attributes(attributes)
+        # Add custom attributes
+        custom_names = request.form.getlist('custom_attribute_names[]')
+        custom_values = request.form.getlist('custom_attribute_values[]')
+        for name, value in zip(custom_names, custom_values):
+            if name and value:  # Only add if both name and value are provided
+                attributes[name.strip()] = value.strip()
+        
+        # Validate duration and set end time
+        now = datetime.utcnow()
+        if duration_unit == 'minutes':
+            if duration_value < 5:
+                flash('Minimum duration is 5 minutes', 'error')
+                return redirect(url_for('auction.create'))
+            end_time = now + timedelta(minutes=duration_value)
+        elif duration_unit == 'hours':
+            if duration_value < 1:
+                flash('Minimum duration is 1 hour', 'error')
+                return redirect(url_for('auction.create'))
+            end_time = now + timedelta(hours=duration_value)
+        else:  # days
+            if duration_value < 1:
+                flash('Minimum duration is 1 day', 'error')
+                return redirect(url_for('auction.create'))
+            if duration_value > 30:
+                flash('Maximum duration is 30 days', 'error')
+                return redirect(url_for('auction.create'))
+            end_time = now + timedelta(days=duration_value)
+        
+        # Validate reserve price
+        if reserve_price > 0 and reserve_price < initial_price:
+            flash('Reserve price must be greater than or equal to initial price', 'error')
+            return redirect(url_for('auction.create'))
+        
+        # Create item first
+        item = Item(
+            name=title,
+            description=description,
+            category_id=category_id,
+            attributes=json.dumps(attributes)  # Store all attributes as JSON
+        )
         db.session.add(item)
+        db.session.flush()  # Get the item ID without committing
         
-        # Create auction
-        end_time = datetime.utcnow() + timedelta(days=duration_days)
+        # Handle image upload
+        if 'image' in request.files:
+            image = request.files['image']
+            if image and allowed_file(image.filename):
+                filename = secure_filename(image.filename)
+                upload_folder = ensure_upload_folder()
+                image_path = os.path.join(upload_folder, filename)
+                image.save(image_path)
+                # Set the image URL with the correct static path
+                item.image_url = f'/static/uploads/{filename}'
+        
+        # Create auction with exact timestamps
         auction = Auction(
-            item=item,
-            seller=current_user,
             title=title,
             description=description,
+            item_id=item.id,  # Link to the created item
+            seller_id=current_user.id,
             initial_price=initial_price,
-            min_increment=min_increment,
-            secret_min_price=secret_min_price,
-            end_time=end_time
+            min_increment=min_bid_increment,
+            secret_min_price=reserve_price,
+            start_time=now,  # Set exact start time
+            end_time=end_time,  # Set exact end time
+            is_active=True  # Ensure auction starts as active
         )
+        
+        # Save both item and auction
         db.session.add(auction)
         db.session.commit()
         
-        # Check for matching alerts and notify users
-        matching_alerts = Alert.query.filter_by(is_active=True).all()
-        for alert in matching_alerts:
-            if alert.matches_item(item, auction):
-                # In a real app, send email notification
-                # For now, just create a flash message
-                flash(f'Alert notification sent to user {alert.user_id}', 'info')
+        # Check for matching alerts
+        alerts = Alert.query.filter_by(is_active=True).all()
+        for alert in alerts:
+            if alert.matches_auction(auction):
+                notification = Notification(
+                    user_id=alert.user_id,
+                    type='alert_match',
+                    message=f'New auction matches your alert: "{auction.title}"',
+                    reference_id=auction.id
+                )
+                db.session.add(notification)
+                emit_notification(alert.user_id, {
+                    'title': 'Alert Match',
+                    'message': notification.message,
+                    'type': notification.type,
+                    'link': url_for('auction.view', id=auction.id)
+                })
         
+        db.session.commit()
         flash('Auction created successfully!', 'success')
         return redirect(url_for('auction.view', id=auction.id))
     
-    # GET request - show the create form
-    categories = Category.query.all()
+    # GET request - show the create form with categories
+    categories = Category.query.filter_by(parent_id=None).all()
+    # Eager load subcategories to avoid N+1 queries
+    for category in categories:
+        _ = [s for s in category.subcategories]  # Force load subcategories
+        for subcategory in category.subcategories:
+            _ = [s for s in subcategory.subcategories]  # Force load sub-subcategories
     return render_template('auction/create.html', categories=categories)
 
 @auction_bp.route('/<int:id>')
 def view(id):
+    """View auction details."""
     auction = Auction.query.get_or_404(id)
     
-    # Get bid history
-    bids = Bid.query.filter_by(auction_id=id).order_by(Bid.created_at.desc()).all()
+    # Check auction status
+    winner = auction.check_status()
+    if winner and not auction.winner_notified:
+        # Send notification to winner
+        notification = Notification(
+            user_id=winner.id,
+            type='auction_won',
+            message=f'Congratulations! You have won the auction for "{auction.title}"!',
+            reference_id=auction.id
+        )
+        db.session.add(notification)
+        
+        # Send notification to seller
+        seller_notification = Notification(
+            user_id=auction.seller_id,
+            type='auction_ended',
+            message=f'Your auction "{auction.title}" has ended. The winner is {winner.username}.',
+            reference_id=auction.id
+        )
+        db.session.add(seller_notification)
+        
+        auction.winner_notified = True
+        db.session.commit()
+        
+        # Send real-time notifications
+        socketio.emit('notification', {
+            'title': 'Auction Won',
+            'message': notification.message,
+            'type': notification.type,
+            'link': url_for('auction.view', id=auction.id)
+        }, room=f'user_{winner.id}')
+        
+        socketio.emit('notification', {
+            'title': 'Auction Ended',
+            'message': seller_notification.message,
+            'type': seller_notification.type,
+            'link': url_for('auction.view', id=auction.id)
+        }, room=f'user_{auction.seller_id}')
     
-    # Check if auction has ended
-    is_ended = datetime.utcnow() > auction.end_time
+    bids = auction.get_bid_history()
+    is_ended = auction.is_ended
+    seller_rating = Review.get_seller_rating(auction.seller_id)
     
-    # Get similar items
-    similar_items = []
-    if auction.item and auction.item.category_id:
-        similar_auctions = Auction.query.join(Item).filter(
-            Item.category_id == auction.item.category_id,
-            Auction.id != auction.id,
-            Auction.is_active == True,
-            Auction.end_time > datetime.utcnow()
-        ).limit(4).all()
-        similar_items = similar_auctions
+    # Similar active auctions in same category
+    similar_items = auction.get_similar_auctions()
     
-    return render_template('auction/view.html', 
-                          auction=auction,
-                          bids=bids,
-                          is_ended=is_ended,
-                          similar_items=similar_items)
+    return render_template('auction/view.html', auction=auction,
+                           bids=bids, is_ended=is_ended,
+                           similar_items=similar_items,
+                           Review=Review,
+                           seller_rating=seller_rating)
 
 @auction_bp.route('/<int:id>/bid', methods=['POST'])
 @login_required
 def place_bid(id):
+    """Handle manual and automatic (proxy) bids."""
     auction = Auction.query.get_or_404(id)
-    
-    # Check if auction is active and not ended
-    current_time = datetime.utcnow()
-    if not auction.is_active or auction.end_time <= current_time:
-        flash('This auction has ended', 'danger')
+    now = datetime.utcnow()
+    if not auction.is_active or auction.end_time <= now:
+        flash('This auction has ended.', 'danger')
         return redirect(url_for('auction.view', id=id))
-    
-    # Check if user is not the seller
     if auction.seller_id == current_user.id:
-        flash('You cannot bid on your own auction', 'danger')
+        flash('You cannot bid on your own auction.', 'danger')
         return redirect(url_for('auction.view', id=id))
-    
-    # Get bid amount
+
     bid_amount = request.form.get('bid_amount', type=float)
-    auto_bid_limit = request.form.get('auto_bid_limit', type=float)
-    
+    auto_limit = request.form.get('auto_bid_limit', type=float)
     if not bid_amount:
-        flash('Please enter a valid bid amount', 'danger')
+        flash('Enter a valid bid amount.', 'danger')
         return redirect(url_for('auction.view', id=id))
-    
-    # Check if bid is valid (higher than current price + min increment)
-    if bid_amount < auction.next_valid_bid_amount():
-        flash(f'Bid must be at least ${auction.next_valid_bid_amount():.2f}', 'danger')
+
+    # Enforce minimum bid increment
+    next_valid = auction.next_valid_bid_amount()
+    if bid_amount < next_valid:
+        flash(f'Bid must be at least ${next_valid:.2f}.', 'danger')
         return redirect(url_for('auction.view', id=id))
-    
-    # If auto bid limit is provided, make sure it's greater than the bid amount
-    if auto_bid_limit and auto_bid_limit < bid_amount:
-        flash('Auto-bid limit must be greater than your bid amount', 'danger')
+    if auto_limit and auto_limit < bid_amount:
+        flash('Auto-bid limit must exceed your bid.', 'danger')
         return redirect(url_for('auction.view', id=id))
-    
-    # Create the bid
+
     bid = Bid(
         auction_id=id,
         bidder_id=current_user.id,
         amount=bid_amount,
-        auto_bid_limit=auto_bid_limit
+        auto_bid_limit=auto_limit,
+        is_auto_bid=False
     )
     db.session.add(bid)
     db.session.commit()
-    
+
+    # Emit new bid event
+    socketio.emit('new_bid', {
+        'bid_id': bid.id,
+        'auction_id': auction.id,
+        'bidder_username': current_user.username,
+        'amount': bid_amount,
+        'created_at': bid.created_at.isoformat(),
+        'is_auto_bid': False,
+        'is_customer_rep': current_user.is_customer_rep
+    }, room=f'auction_{id}')
+
     # Process automatic bidding
     process_auto_bidding(auction)
     
-    flash('Your bid has been placed successfully!', 'success')
+    # Notify other bidders
+    notify_other_bidders(auction, bid)
+    
+    flash('Your bid has been placed.', 'success')
     return redirect(url_for('auction.view', id=id))
 
 def process_auto_bidding(auction):
-    """Process automatic bidding for an auction"""
-    # Get all auto bids for this auction, ordered by auto_bid_limit (highest first)
-    auto_bids = Bid.query.filter(
-        Bid.auction_id == auction.id,
-        Bid.auto_bid_limit.isnot(None)
-    ).order_by(Bid.auto_bid_limit.desc()).all()
+    """Process automatic bidding (proxy bidding) for an auction."""
+    # Get current highest bid
+    highest = Bid.query.filter_by(auction_id=auction.id).order_by(Bid.amount.desc()).first()
+    if not highest:
+        return
+
+    # Get all active auto-bids
+    auto_bids = (
+        Bid.query
+           .filter(
+               Bid.auction_id == auction.id,
+               Bid.auto_bid_limit.isnot(None)
+           )
+           .order_by(Bid.auto_bid_limit.desc())
+           .all()
+    )
     
     if not auto_bids:
         return
-    
-    # Get current highest bid
-    highest_bid = Bid.query.filter_by(auction_id=auction.id).order_by(Bid.amount.desc()).first()
-    
-    # Check if we have at least 2 auto bids
-    if len(auto_bids) >= 2:
-        # Get the top two auto-bidders
-        highest_auto_bidder = auto_bids[0]
-        second_highest_auto_bidder = auto_bids[1]
-        
-        # If the highest auto bidder is not already the highest bidder
-        if highest_auto_bidder.id != highest_bid.id:
-            # Place a new bid for the highest auto bidder
-            new_bid_amount = min(
-                second_highest_auto_bidder.auto_bid_limit + auction.min_increment,
-                highest_auto_bidder.auto_bid_limit
+
+    # Process auto-bids
+    current_price = highest.amount
+    for bid in auto_bids:
+        if bid.bidder_id == highest.bidder_id:
+            continue
+            
+        if bid.auto_bid_limit > current_price:
+            new_amount = min(
+                bid.auto_bid_limit,
+                current_price + auction.min_increment
             )
             
-            # Make sure it's higher than the current highest bid
-            new_bid_amount = max(new_bid_amount, highest_bid.amount + auction.min_increment)
-            
-            # Only place a new bid if it's within the limit
-            if new_bid_amount <= highest_auto_bidder.auto_bid_limit:
+            if new_amount > current_price:
+                # Get the bidder to ensure they exist
+                bidder = User.query.get(bid.bidder_id)
+                if not bidder:
+                    continue  # Skip if bidder doesn't exist
+                    
                 new_bid = Bid(
                     auction_id=auction.id,
-                    bidder_id=highest_auto_bidder.bidder_id,
-                    amount=new_bid_amount,
-                    auto_bid_limit=highest_auto_bidder.auto_bid_limit
+                    bidder_id=bid.bidder_id,
+                    amount=new_amount,
+                    auto_bid_limit=bid.auto_bid_limit,
+                    is_auto_bid=True
                 )
                 db.session.add(new_bid)
-                db.session.commit()
+                db.session.flush()  # Get the ID and created_at without committing
+                current_price = new_amount
+                
+                # Emit new auto-bid event
+                socketio.emit('new_bid', {
+                    'bid_id': new_bid.id,
+                    'auction_id': auction.id,
+                    'bidder_username': bidder.username,
+                    'amount': new_amount,
+                    'created_at': new_bid.created_at.isoformat() if new_bid.created_at else datetime.utcnow().isoformat(),
+                    'is_auto_bid': True,
+                    'is_customer_rep': bidder.is_customer_rep
+                }, room=f'auction_{auction.id}')
+                
+                # Create notification for auto-bid
+                notification = Notification(
+                    user_id=bid.bidder_id,
+                    type='auto_bid',
+                    message=f'Your auto-bid of ${new_amount:.2f} was placed on auction "{auction.title}"',
+                    reference_id=auction.id
+                )
+                db.session.add(notification)
+                
+                # Send real-time notification
+                socketio.emit('user_notification', {
+                    'title': 'Auto-bid Placed',
+                    'message': notification.message,
+                    'type': 'info',
+                    'link': url_for('auction.view', id=auction.id)
+                }, room=f'user_{bid.bidder_id}')
+                
+                # Notify if auto-bid limit is reached
+                if new_amount >= bid.auto_bid_limit:
+                    notification = Notification(
+                        user_id=bid.bidder_id,
+                        type='auto_bid_limit',
+                        message=f'Your auto-bid limit of ${bid.auto_bid_limit:.2f} has been reached for auction "{auction.title}"',
+                        reference_id=auction.id
+                    )
+                    db.session.add(notification)
+                    
+                    # Send real-time notification
+                    socketio.emit('user_notification', {
+                        'title': 'Auto-bid Limit Reached',
+                        'message': notification.message,
+                        'type': 'warning',
+                        'link': url_for('auction.view', id=auction.id)
+                    }, room=f'user_{bid.bidder_id}')
     
-    # Handle the case where there's only one auto bidder
-    elif len(auto_bids) == 1 and highest_bid.id != auto_bids[0].id:
-        auto_bidder = auto_bids[0]
-        new_bid_amount = highest_bid.amount + auction.min_increment
+    db.session.commit()
+
+def notify_other_bidders(auction, new_bid):
+    """Notify other bidders about new bids."""
+    other_bidders = set()
+    for bid in auction.bids:
+        if bid.bidder_id != new_bid.bidder_id:
+            other_bidders.add(bid.bidder)
+    
+    for bidder in other_bidders:
+        # Create notification
+        notification = Notification(
+            user_id=bidder.id,
+            type='outbid',
+            message=f'You have been outbid on auction "{auction.title}". New bid: ${new_bid.amount:.2f}',
+            reference_id=auction.id
+        )
+        db.session.add(notification)
         
-        if new_bid_amount <= auto_bidder.auto_bid_limit:
-            new_bid = Bid(
-                auction_id=auction.id,
-                bidder_id=auto_bidder.bidder_id,
-                amount=new_bid_amount,
-                auto_bid_limit=auto_bidder.auto_bid_limit
-            )
-            db.session.add(new_bid)
-            db.session.commit()
+        # Send real-time notification
+        socketio.emit('user_notification', {
+            'title': 'You Have Been Outbid',
+            'message': notification.message,
+            'type': 'warning',
+            'link': url_for('auction.view', id=auction.id)
+        }, room=f'user_{bidder.id}')
+    
+    db.session.commit()
+
+@auction_bp.route('/<int:id>/history')
+def bid_history(id):
+    """View complete bid history for an auction."""
+    auction = Auction.query.get_or_404(id)
+    bids = auction.get_bid_history()
+    return render_template('auction/history.html', auction=auction, bids=bids)
+
+@auction_bp.route('/user/<int:user_id>/auctions')
+@login_required
+def user_auctions(user_id):
+    """View all auctions a user has participated in."""
+    user = User.query.get_or_404(user_id)
+    auctions_bid_on = (
+        Auction.query
+               .join(Bid)
+               .filter(Bid.bidder_id == user_id)
+               .distinct()
+               .all()
+    )
+    auctions_sold = Auction.query.filter_by(seller_id=user_id).all()
+    return render_template('auction/user_auctions.html',
+                           user=user,
+                           auctions_bid_on=auctions_bid_on,
+                           auctions_sold=auctions_sold)
+
+@auction_bp.route('/<int:id>/end', methods=['POST'])
+@login_required
+def end_auction(id):
+    """End an auction early (admin/customer rep only)."""
+    if not current_user.is_admin and not current_user.is_customer_rep:
+        abort(403)
+        
+    auction = Auction.query.get_or_404(id)
+    if not auction.is_active:
+        flash('Auction is already ended.', 'warning')
+        return redirect(url_for('auction.view', id=id))
+        
+    auction.is_active = False
+    auction.end_time = datetime.utcnow()
+    winner = auction.determine_winner()
+    
+    if winner:
+        send_notification_email(
+            winner.email,
+            'Auction Won',
+            f'Congratulations! You have won the auction for "{auction.title}"!'
+        )
+        send_notification_email(
+            auction.seller.email,
+            'Auction Ended',
+            f'Your auction "{auction.title}" has ended. The winner is {winner.username}.'
+        )
+    else:
+        send_notification_email(
+            auction.seller.email,
+            'Auction Ended',
+            f'Your auction "{auction.title}" has ended. No winner was determined.'
+        )
+    
+    db.session.commit()
+    flash('Auction ended successfully.', 'success')
+    return redirect(url_for('auction.view', id=id))
+
+@auction_bp.route('/auction/<int:auction_id>/question', methods=['POST'])
+@login_required
+def ask_question(auction_id):
+    auction = Auction.query.get_or_404(auction_id)
+    
+    # Check if auction is active
+    if not auction.is_active:
+        flash('Cannot ask questions on inactive auctions', 'error')
+        return redirect(url_for('auction.view', id=auction_id))
+    
+    question_text = request.form.get('question_text')
+    
+    if not question_text:
+        flash('Question text is required', 'error')
+        return redirect(url_for('auction.view', id=auction_id))
+    
+    question = Question(
+        user_id=current_user.id,
+        auction_id=auction_id,
+        question_text=question_text
+    )
+    db.session.add(question)
+    db.session.commit()
+    
+    flash('Your question has been posted', 'success')
+    return redirect(url_for('auction.view', id=auction_id))
+
+@auction_bp.route('/question/<int:question_id>/answer', methods=['POST'])
+@login_required
+def answer_question(question_id):
+    question = Question.query.get_or_404(question_id)
+    auction = question.auction
+    
+    if current_user.id != auction.seller_id and not current_user.is_customer_rep:
+        flash('You are not authorized to answer this question.', 'danger')
+        return redirect(url_for('auction.view', id=auction.id))
+    
+    answer_text = request.form.get('answer_text')
+    if not answer_text:
+        flash('Answer text is required.', 'danger')
+        return redirect(url_for('auction.view', id=auction.id))
+    
+    answer = Answer(
+        question_id=question_id,
+        user_id=current_user.id,
+        answer_text=answer_text
+    )
+    
+    db.session.add(answer)
+    question.is_answered = True
+    db.session.commit()
+    
+    # Emit socket event for new answer
+    socketio.emit('new_answer', {
+        'question_id': question_id,
+        'answer': {
+            'id': answer.id,
+            'text': answer_text,
+            'username': current_user.username,
+            'is_customer_rep': current_user.is_customer_rep,
+            'created_at': answer.created_at.isoformat()
+        }
+    }, room=f'auction_{auction.id}')
+    
+    flash('Your answer has been posted.', 'success')
+    return redirect(url_for('auction.view', id=auction.id))

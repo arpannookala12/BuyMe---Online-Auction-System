@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+
+{% block title %}Browse Questions - BuyMe Support{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Browse Questions</h2>
+    <div>
+        <a href="{{ url_for('question.ask') }}" class="btn btn-primary">Ask a Question</a>
+        <a href="{{ url_for('question.index') }}" class="btn btn-outline-primary">Support Home</a>
+    </div>
+</div>
+
+<!-- Search and filters -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form action="{{ url_for('question.browse') }}" method="get">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <div class="input-group">
+                        <input type="text" class="form-control" placeholder="Search questions..." 
+                               name="search" value="{{ search }}">
+                        <button class="btn btn-outline-primary" type="submit">Search</button>
+                    </div>
+                </div>
+                
+                <div class="col-md-3 mb-3">
+                    <select class="form-select" name="status" onchange="this.form.submit()">
+                        <option value="all" {% if status == 'all' %}selected{% endif %}>All Statuses</option>
+                        <option value="open" {% if status == 'open' %}selected{% endif %}>Open Questions</option>
+                        <option value="answered" {% if status == 'answered' %}selected{% endif %}>Answered</option>
+                        <option value="closed" {% if status == 'closed' %}selected{% endif %}>Closed</option>
+                    </select>
+                </div>
+                
+                <div class="col-md-3 mb-3">
+                    <select class="form-select" name="sort" onchange="this.form.submit()">
+                        <option value="newest" {% if sort == 'newest' %}selected{% endif %}>Newest First</option>
+                        <option value="oldest" {% if sort == 'oldest' %}selected{% endif %}>Oldest First</option>
+                        <option value="recent_activity" {% if sort == 'recent_activity' %}selected{% endif %}>Recent Activity</option>
+                    </select>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Questions list -->
+{% if questions.items %}
+    <div class="list-group">
+        {% for question in questions.items %}
+            <a href="{{ url_for('question.view', id=question.id) }}" class="list-group-item list-group-item-action">
+                <div class="d-flex w-100 justify-content-between align-items-center">
+                    <h5 class="mb-1">{{ question.title }}</h5>
+                    <span class="badge {% if question.status == 'open' %}bg-info{% elif question.status == 'answered' %}bg-success{% else %}bg-secondary{% endif %}">
+                        {{ question.status|capitalize }}
+                    </span>
+                </div>
+                <p class="mb-1">{{ question.content|truncate(150) }}</p>
+                <div class="d-flex justify-content-between">
+                    <small>
+                        <span class="text-muted">Asked by:</span> {{ question.user.username }}
+                    </small>
+                    <div>
+                        <small class="text-muted">Posted:</small> {{ question.created_at.strftime('%b %d, %Y') }}
+                        {% if question.answers.count() > 0 %}
+                            <span class="badge bg-secondary">{{ question.answers.count() }} answer{% if question.answers.count() != 1 %}s{% endif %}</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </a>
+        {% endfor %}
+    </div>
+    
+    <!-- Pagination -->
+    {% if questions.pages > 1 %}
+        <nav aria-label="Page navigation" class="mt-4">
+            <ul class="pagination justify-content-center">
+                {% if questions.has_prev %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('question.browse', page=questions.prev_num, search=search, status=status, sort=sort) }}">
+                            Previous
+                        </a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled">
+                        <a class="page-link" href="#" tabindex="-1" aria-disabled="true">Previous</a>
+                    </li>
+                {% endif %}
+                
+                {% for page_num in questions.iter_pages() %}
+                    {% if page_num %}
+                        <li class="page-item {{ 'active' if page_num == questions.page else '' }}">
+                            <a class="page-link" href="{{ url_for('question.browse', page=page_num, search=search, status=status, sort=sort) }}">
+                                {{ page_num }}
+                            </a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled">
+                            <a class="page-link" href="#">...</a>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if questions.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('question.browse', page=questions.next_num, search=search, status=status, sort=sort) }}">
+                            Next
+                        </a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled">
+                        <a class="page-link" href="#" tabindex="-1" aria-disabled="true">Next</a>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+    {% endif %}
+{% else %}
+    <div class="alert alert-info">
+        {% if search %}
+            No questions found matching "{{ search }}". Try a different search term or 
+            <a href="{{ url_for('question.browse') }}">browse all questions</a>.
+        {% else %}
+            No questions found for the selected filters.
+        {% endif %}
+    </div>
+{% endif %}
+{% endblock %}

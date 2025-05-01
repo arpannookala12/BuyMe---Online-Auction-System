@@ -12,13 +12,13 @@
         <h5>Search Users</h5>
     </div>
     <div class="card-body">
-        <form action="{{ url_for('customer_rep.manage_users') }}" method="get">
+        <form action="{{ url_for('customer_rep.list_users') }}" method="get">
             <div class="input-group">
                 <input type="text" class="form-control" placeholder="Search by username, email, name..." 
                        name="search" value="{{ search }}">
                 <button class="btn btn-outline-primary" type="submit">Search</button>
                 {% if search %}
-                    <a href="{{ url_for('customer_rep.manage_users') }}" class="btn btn-outline-secondary">Clear</a>
+                    <a href="{{ url_for('customer_rep.list_users') }}" class="btn btn-outline-secondary">Clear</a>
                 {% endif %}
             </div>
         </form>

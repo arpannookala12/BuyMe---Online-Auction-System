@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>Notifications</h2>
+                {% if notifications %}
+                <button class="btn btn-outline-primary" onclick="markAllAsRead()">
+                    Mark All as Read
+                </button>
+                {% endif %}
+            </div>
+
+            {% if notifications %}
+                <div class="list-group">
+                    {% for notification in notifications %}
+                    <div class="list-group-item list-group-item-action {% if not notification.is_read %}list-group-item-primary{% endif %}"
+                         data-notification-id="{{ notification.id }}">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h5 class="mb-1">{{ notification.title }}</h5>
+                            <small class="text-muted">{{ notification.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                        </div>
+                        <p class="mb-1">{{ notification.message }}</p>
+                        {% if notification.link %}
+                        <a href="{{ notification.link }}" class="btn btn-sm btn-link">View Details</a>
+                        {% endif %}
+                        {% if not notification.is_read %}
+                        <button class="btn btn-sm btn-outline-secondary float-end" 
+                                onclick="markAsRead('{{ notification.id }}')">
+                            Mark as Read
+                        </button>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="alert alert-info">
+                    You have no notifications.
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% block scripts %}
+<script>
+function markAsRead(notificationId) {
+    fetch(`/notifications/${notificationId}/read`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const notification = document.querySelector(`[data-notification-id="${notificationId}"]`);
+            notification.classList.remove('list-group-item-primary');
+            const button = notification.querySelector('button');
+            if (button) {
+                button.remove();
+            }
+            updateNotificationCount();
+        }
+    })
+    .catch(error => console.error('Error:', error));
+}
+
+function markAllAsRead() {
+    fetch('/notifications/read-all', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            document.querySelectorAll('.list-group-item-primary').forEach(item => {
+                item.classList.remove('list-group-item-primary');
+                const button = item.querySelector('button');
+                if (button) {
+                    button.remove();
+                }
+            });
+            updateNotificationCount();
+        }
+    })
+    .catch(error => console.error('Error:', error));
+}
+
+function updateNotificationCount() {
+    fetch('/notifications/unread-count')
+        .then(response => response.json())
+        .then(data => {
+            const badge = document.querySelector('#notification-badge');
+            if (badge) {
+                if (data.count > 0) {
+                    badge.textContent = data.count;
+                    badge.style.display = 'inline';
+                } else {
+                    badge.style.display = 'none';
+                }
+            }
+        })
+        .catch(error => console.error('Error:', error));
+}
+</script>
+{% endblock %}
+{% endblock %} 

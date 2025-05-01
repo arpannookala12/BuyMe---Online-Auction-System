@@ -15,6 +15,10 @@
     --gradient-end: #1E1E3F;
     --purple-gradient: linear-gradient(135deg, #2B1055, #7597DE);
 }
+.progress-bar {
+  /* use our custom property for width */
+  width: var(--progress-width) !important;
+}
 
 /* Global styles */
 body {
@@ -1032,3 +1036,9 @@ p, span, div, label, th, td {
     background-color: var(--accent-secondary) !important;
     color: var(--primary-color) !important;
 } 
+
+.progress-bar {
+    /* use our custom property for width */
+    width: var(--progress-width) !important;
+  }
+  

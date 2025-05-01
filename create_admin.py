@@ -8,7 +8,7 @@ def create_admin_user():
     
     with app.app_context():
         # Check if admin already exists
-        admin = User.query.filter_by(role='admin').first()
+        admin = User.query.filter_by(is_admin=True).first()
         if admin:
             print(f"Admin user already exists: {admin.username}")
             return
@@ -43,9 +43,9 @@ def create_admin_user():
         admin = User(
             username=username,
             email=email,
-            password=password,
-            role='admin'
+            is_admin=True
         )
+        admin.set_password(password)
         
         db.session.add(admin)
         db.session.commit()

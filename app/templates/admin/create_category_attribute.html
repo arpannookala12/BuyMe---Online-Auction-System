@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block title %}Create Attribute for {{ category.name }} - BuyMe{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Create Attribute for {{ category.name }}</h2>
+    <a href="{{ url_for('admin.manage_category_attributes', category_id=category.id) }}" class="btn btn-outline-primary">Back to Attributes</a>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h3>New Category Attribute</h3>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('admin.create_category_attribute', category_id=category.id) }}">
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Name</label>
+                        <input type="text" class="form-control" id="name" name="name" required>
+                        <div class="form-text">Internal name used in the database (e.g., screen_size)</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="display_name" class="form-label">Display Name</label>
+                        <input type="text" class="form-control" id="display_name" name="display_name" required>
+                        <div class="form-text">Name shown to users (e.g., Screen Size)</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="attribute_type" class="form-label">Type</label>
+                        <select class="form-select" id="attribute_type" name="attribute_type" required>
+                            <option value="text">Text</option>
+                            <option value="number">Number</option>
+                            <option value="select">Dropdown Select</option>
+                            <option value="boolean">Yes/No</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="required" name="required">
+                        <label class="form-check-label" for="required">Required</label>
+                    </div>
+                    
+                    <div class="mb-3" id="options_div" style="display: none;">
+                        <label for="options" class="form-label">Options</label>
+                        <input type="text" class="form-control" id="options" name="options">
+                        <div class="form-text">Comma-separated list of options for dropdown select (e.g., Small,Medium,Large)</div>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">Create Attribute</button>
+                        <a href="{{ url_for('admin.manage_category_attributes', category_id=category.id) }}" class="btn btn-outline-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const attributeType = document.getElementById('attribute_type');
+        const optionsDiv = document.getElementById('options_div');
+        
+        function toggleOptionsVisibility() {
+            if (attributeType.value === 'select') {
+                optionsDiv.style.display = 'block';
+            } else {
+                optionsDiv.style.display = 'none';
+            }
+        }
+        
+        attributeType.addEventListener('change', toggleOptionsVisibility);
+        
+        // Initial visibility check
+        toggleOptionsVisibility();
+    });
+</script>
+{% endblock %}

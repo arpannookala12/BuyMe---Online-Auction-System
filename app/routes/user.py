@@ -1,7 +1,7 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request
+from flask import Blueprint, render_template, redirect, url_for, flash, request, abort
 from flask_login import login_required, current_user
 from app import db
-from app.models import User, Auction, Bid
+from app.models import User, Auction, Bid, Review, Question, Answer
 from datetime import datetime, timezone
 
 user_bp = Blueprint('user', __name__, url_prefix='/user')
@@ -122,3 +122,28 @@ def my_bids():
             }
     
     return render_template('user/my_bids.html', auctions_bid_on=auctions_bid_on, status=status)
+
+@user_bp.route('/profile/<int:id>')
+def profile_view(id):
+    """View another user's profile"""
+    user = User.query.get_or_404(id)
+    
+    # Get recent auctions by this user
+    recent_auctions = Auction.query.filter_by(seller_id=id).order_by(Auction.created_at.desc()).limit(5).all()
+    
+    # Get reviews for this user
+    reviews = Review.query.filter_by(seller_id=id).order_by(Review.created_at.desc()).limit(3).all()
+    avg_rating = user.get_average_rating()
+    
+    return render_template('user/public_profile.html', 
+                          user=user, 
+                          recent_auctions=recent_auctions,
+                          reviews=reviews,
+                          avg_rating=avg_rating)
+
+@user_bp.route('/questions')
+@login_required
+def view_questions():
+    """View all questions asked by the user and their answers."""
+    questions = Question.query.filter_by(user_id=current_user.id).order_by(Question.created_at.desc()).all()
+    return render_template('user/questions.html', questions=questions)

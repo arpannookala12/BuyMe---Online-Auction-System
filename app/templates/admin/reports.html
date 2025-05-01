@@ -46,8 +46,29 @@
 
 <!-- Time Period Filter -->
 <div class="card mb-4">
-    <div class="card-header">
-        <h5>Time Period</h5>
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Time Period</h5>
+        
+        <!-- Download options -->
+        <div class="dropdown">
+            <button class="btn btn-success dropdown-toggle" type="button" id="downloadOptions" data-bs-toggle="dropdown" aria-expanded="false">
+                Download Report
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="downloadOptions">
+                <li><a class="dropdown-item" href="{{ url_for('admin.download_report', report_type=report_type, period=time_period, format='excel') }}">
+                    <i class="bi bi-file-earmark-excel"></i> Excel (.xlsx)
+                </a></li>
+                <li><a class="dropdown-item" href="{{ url_for('admin.download_report', report_type=report_type, period=time_period, format='csv') }}">
+                    <i class="bi bi-file-earmark-text"></i> CSV
+                </a></li>
+                <li><a class="dropdown-item" href="{{ url_for('admin.download_report', report_type=report_type, period=time_period, format='chart') }}" target="_blank">
+                    <i class="bi bi-bar-chart"></i> Chart Image
+                </a></li>
+                <li><a class="dropdown-item" href="{{ url_for('admin.download_report', report_type=report_type, period=time_period, format='json') }}" target="_blank">
+                    <i class="bi bi-code"></i> JSON Data
+                </a></li>
+            </ul>
+        </div>
     </div>
     <div class="card-body">
         <div class="btn-group" role="group">
@@ -68,6 +89,17 @@
                 All Time
             </a>
         </div>
+    </div>
+</div>
+
+<!-- Add chart visualization -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5>Chart View</h5>
+    </div>
+    <div class="card-body text-center">
+        <img src="{{ url_for('admin.download_report', report_type=report_type, period=time_period, format='chart') }}" 
+             class="img-fluid" alt="Report Chart">
     </div>
 </div>
 

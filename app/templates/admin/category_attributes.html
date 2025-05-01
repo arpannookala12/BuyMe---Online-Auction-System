@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Attributes for {{ category.name }} - BuyMe{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Attributes for {{ category.name }}</h2>
+    <div>
+        <a href="{{ url_for('admin.create_category_attribute', category_id=category.id) }}" class="btn btn-success">Create Attribute</a>
+        <a href="{{ url_for('admin.manage_categories') }}" class="btn btn-outline-primary">Back to Categories</a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        {% if attributes %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Display Name</th>
+                            <th>Type</th>
+                            <th>Required</th>
+                            <th>Options</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for attribute in attributes %}
+                            <tr>
+                                <td>{{ attribute.name }}</td>
+                                <td>{{ attribute.display_name }}</td>
+                                <td>{{ attribute.attribute_type }}</td>
+                                <td>
+                                    {% if attribute.required %}
+                                        <span class="badge bg-success">Yes</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">No</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ attribute.options }}</td>
+                                <td>
+                                    <a href="{{ url_for('admin.edit_category_attribute', attribute_id=attribute.id) }}" class="btn btn-sm btn-primary">Edit</a>
+                                    <form method="POST" action="{{ url_for('admin.delete_category_attribute', attribute_id=attribute.id) }}" class="d-inline">
+                                        <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure you want to delete this attribute?');">Delete</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="alert alert-info">
+                No attributes defined for this category yet. <a href="{{ url_for('admin.create_category_attribute', category_id=category.id) }}">Create one now</a>.
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

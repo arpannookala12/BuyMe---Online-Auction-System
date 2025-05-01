@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+
+{% block title %}Notifications{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 mb-0">Notifications</h1>
+                <div class="btn-group">
+                    <a href="{{ url_for('notification.list', filter='all') }}" 
+                       class="btn btn-outline-primary {% if filter == 'all' %}active{% endif %}">
+                        All
+                    </a>
+                    <a href="{{ url_for('notification.list', filter='unread') }}" 
+                       class="btn btn-outline-primary {% if filter == 'unread' %}active{% endif %}">
+                        Unread
+                    </a>
+                </div>
+            </div>
+
+            {% if notifications %}
+                <div class="list-group">
+                    {% for notification in notifications %}
+                        <div id="notification-{{ notification.id }}" 
+                             class="list-group-item list-group-item-action {% if not notification.is_read %}unread{% endif %}">
+                            <div class="d-flex w-100 justify-content-between align-items-center">
+                                <div class="flex-grow-1">
+                                    <p class="mb-1">{{ notification.message }}</p>
+                                    <small class="text-muted">{{ notification.created_at|timeago }}</small>
+                                </div>
+                                <div class="ms-3">
+                                    {% if not notification.is_read %}
+                                        <form action="{{ url_for('notification.mark_read', notification_id=notification.id) }}" 
+                                              method="POST" class="d-inline">
+                                            <button type="submit" class="btn btn-sm btn-outline-primary">
+                                                Mark as Read
+                                            </button>
+                                        </form>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+
+                {% if pagination.pages > 1 %}
+                    <nav class="mt-4">
+                        <ul class="pagination justify-content-center">
+                            {% if pagination.has_prev %}
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ url_for('notification.list', page=pagination.prev_num, filter=filter) }}">
+                                        Previous
+                                    </a>
+                                </li>
+                            {% endif %}
+
+                            {% for page in pagination.iter_pages() %}
+                                {% if page %}
+                                    <li class="page-item {% if page == pagination.page %}active{% endif %}">
+                                        <a class="page-link" href="{{ url_for('notification.list', page=page, filter=filter) }}">
+                                            {{ page }}
+                                        </a>
+                                    </li>
+                                {% else %}
+                                    <li class="page-item disabled">
+                                        <span class="page-link">...</span>
+                                    </li>
+                                {% endif %}
+                            {% endfor %}
+
+                            {% if pagination.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ url_for('notification.list', page=pagination.next_num, filter=filter) }}">
+                                        Next
+                                    </a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                {% endif %}
+            {% else %}
+                <div class="alert alert-info">
+                    No notifications found.
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block styles %}
+<style>
+    .unread {
+        background-color: #f8f9fa;
+    }
+    .unread:hover {
+        background-color: #e9ecef;
+    }
+</style>
+{% endblock %} 

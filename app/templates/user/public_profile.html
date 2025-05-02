@@ -35,6 +35,33 @@
                 {% else %}
                     <p class="text-muted">No ratings yet</p>
                 {% endif %}
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('auction.user_auctions', user_id=user.id, type='seller') }}" class="btn btn-outline-primary btn-sm">View All Auctions</a>
+                    <a href="{{ url_for('auction.user_auctions', user_id=user.id, type='buyer') }}" class="btn btn-outline-primary btn-sm">View Won Auctions</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Auction activity -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>Auction Activity</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-3">
+                    <a href="{{ url_for('auction.user_auctions', user_id=user.id, type='seller') }}" class="btn btn-primary" style="flex: 1; margin-right: 5px;">
+                        <i class="bi bi-tag-fill"></i> Selling
+                    </a>
+                    <a href="{{ url_for('auction.user_auctions', user_id=user.id, type='buyer') }}" class="btn btn-success" style="flex: 1; margin-right: 5px;">
+                        <i class="bi bi-trophy-fill"></i> Won
+                    </a>
+                    <a href="{{ url_for('auction.user_auctions', user_id=user.id, type='bidder') }}" class="btn btn-info" style="flex: 1;">
+                        <i class="bi bi-cash"></i> Bid On
+                    </a>
+                </div>
+                <div class="alert alert-light">
+                    <small class="text-muted">Click any button above to see all auctions this user has been involved with.</small>
+                </div>
             </div>
         </div>
     </div>

@@ -104,6 +104,10 @@
                                                onclick="return confirm('Are you sure you want to delete this alert?');">
                                                 Delete
                                             </a>
+                                            <a href="{{ url_for('alert.matching_auctions', alert_id=alert.id) }}" 
+                                               class="btn btn-sm btn-info" title="Find auctions matching this alert">
+                                                <i class="bi bi-search"></i> Matching Auctions
+                                            </a>
                                         </td>
                                     </tr>
                                 {% endfor %}

@@ -1,7 +1,7 @@
 from app import socketio, db
 from flask_socketio import emit, join_room, leave_room
 from flask_login import current_user
-from app.models import Auction, Bid, Alert, Wishlist, User
+from app.models import Auction, Bid, Alert, Wishlist, User, Question, Answer
 from app import db, socketio
 import time
 import threading
@@ -33,17 +33,16 @@ def background_auction_monitor():
                     # Notify seller
                     notification = Notification(
                         user_id=auction.seller_id,
-                        title='Auction Ending Soon',
-                        message=f'Your auction "{auction.title}" is ending in less than 5 minutes!',
                         type='auction_ending',
-                        link=f'/auction/{auction.id}'
+                        message=f'Your auction "{auction.title}" is ending in less than 5 minutes!',
+                        reference_id=auction.id
                     )
                     db.session.add(notification)
                     socketio.emit('notification', {
-                        'title': notification.title,
+                        'title': 'Auction Ending Soon',
                         'message': notification.message,
                         'type': notification.type,
-                        'link': notification.link
+                        'link': f'/auction/{auction.id}'
                     }, room=f'user_{auction.seller_id}')
                     
                     # Notify bidders
@@ -51,17 +50,16 @@ def background_auction_monitor():
                         if bid.bidder_id != auction.seller_id:
                             notification = Notification(
                                 user_id=bid.bidder_id,
-                                title='Auction Ending Soon',
-                                message=f'An auction you bid on "{auction.title}" is ending in less than 5 minutes!',
                                 type='auction_ending',
-                                link=f'/auction/{auction.id}'
+                                message=f'An auction you bid on "{auction.title}" is ending in less than 5 minutes!',
+                                reference_id=auction.id
                             )
                             db.session.add(notification)
                             socketio.emit('notification', {
-                                'title': notification.title,
+                                'title': 'Auction Ending Soon',
                                 'message': notification.message,
                                 'type': notification.type,
-                                'link': notification.link
+                                'link': f'/auction/{auction.id}'
                             }, room=f'user_{bid.bidder_id}')
                 
                 # Check ended auctions
@@ -78,33 +76,31 @@ def background_auction_monitor():
                         # Notify winner
                         notification = Notification(
                             user_id=winner.id,
-                            title='Auction Won',
-                            message=f'Congratulations! You won the auction for "{auction.title}"!',
                             type='auction_won',
-                            link=f'/auction/{auction.id}'
+                            message=f'Congratulations! You won the auction for "{auction.title}"!',
+                            reference_id=auction.id
                         )
                         db.session.add(notification)
                         socketio.emit('notification', {
-                            'title': notification.title,
+                            'title': 'Auction Won',
                             'message': notification.message,
                             'type': notification.type,
-                            'link': notification.link
+                            'link': f'/auction/{auction.id}'
                         }, room=f'user_{winner.id}')
                         
                         # Notify seller
                         notification = Notification(
                             user_id=auction.seller_id,
-                            title='Auction Ended',
-                            message=f'Your auction "{auction.title}" has ended. The winner is {winner.username}.',
                             type='auction_ended',
-                            link=f'/auction/{auction.id}'
+                            message=f'Your auction "{auction.title}" has ended. The winner is {winner.username}.',
+                            reference_id=auction.id
                         )
                         db.session.add(notification)
                         socketio.emit('notification', {
-                            'title': notification.title,
+                            'title': 'Auction Ended',
                             'message': notification.message,
                             'type': notification.type,
-                            'link': notification.link
+                            'link': f'/auction/{auction.id}'
                         }, room=f'user_{auction.seller_id}')
                         
                         # Notify other bidders
@@ -112,17 +108,16 @@ def background_auction_monitor():
                             if bid.bidder_id not in [winner.id, auction.seller_id]:
                                 notification = Notification(
                                     user_id=bid.bidder_id,
-                                    title='Auction Ended',
-                                    message=f'The auction "{auction.title}" has ended. You were outbid.',
                                     type='auction_ended',
-                                    link=f'/auction/{auction.id}'
+                                    message=f'The auction "{auction.title}" has ended. You were outbid.',
+                                    reference_id=auction.id
                                 )
                                 db.session.add(notification)
                                 socketio.emit('notification', {
-                                    'title': notification.title,
+                                    'title': 'Auction Ended',
                                     'message': notification.message,
                                     'type': notification.type,
-                                    'link': notification.link
+                                    'link': f'/auction/{auction.id}'
                                 }, room=f'user_{bid.bidder_id}')
                 
                 db.session.commit()
@@ -145,7 +140,14 @@ def start_background_monitor(app=None):
 def handle_connect():
     """Handle client connection."""
     if current_user.is_authenticated:
+        # Join the user's personal room
         join_room(f'user_{current_user.id}')
+        print(f"User {current_user.id} joined their personal room")
+        
+        # If user is a customer rep, also join that room
+        if current_user.is_customer_rep:
+            join_room('customer_reps')
+            print(f"Customer rep {current_user.id} joined the customer_reps room")
 
 @socketio.on('disconnect')
 def handle_disconnect():
@@ -155,10 +157,11 @@ def handle_disconnect():
 
 @socketio.on('join_auction')
 def on_join_auction(data):
-    """Join an auction room for real-time updates."""
+    """Join an auction room."""
     auction_id = data.get('auction_id')
     if auction_id:
         join_room(f'auction_{auction_id}')
+        emit('status', {'msg': f'Joined auction room {auction_id}'}, room=f'auction_{auction_id}')
 
 @socketio.on('leave_auction')
 def on_leave_auction(data):
@@ -166,6 +169,97 @@ def on_leave_auction(data):
     auction_id = data.get('auction_id')
     if auction_id:
         leave_room(f'auction_{auction_id}')
+
+@socketio.on('join_customer_rep_room')
+def handle_join_customer_rep_room():
+    """Handle customer rep joining their room."""
+    if current_user.is_authenticated and current_user.is_customer_rep:
+        join_room(f'customer_rep_{current_user.id}')
+        join_room('customer_reps')  # Join a common room for all customer reps
+
+@socketio.on('join_user_room')
+def handle_join_user_room(data):
+    """Handle user joining their personal room."""
+    if current_user.is_authenticated:
+        join_room(f'user_{current_user.id}')
+
+@socketio.on('new_question')
+def handle_new_question(data):
+    """Handle new question event."""
+    question_id = data.get('question_id')
+    auction_id = data.get('auction_id')
+    user_id = data.get('user_id')
+    question_text = data.get('question_text')
+    
+    if question_id and auction_id:
+        question = Question.query.get(question_id)
+        if question:
+            # Emit to all users in the auction room
+            socketio.emit('new_question', {
+                'question_id': question.id,
+                'auction_id': auction_id,
+                'user_id': user_id,
+                'user_username': question.user.username,
+                'question_text': question.text,
+                'timestamp': question.created_at.isoformat()
+            }, room=f'auction_{auction_id}')
+            
+            # Notify customer reps about the new question
+            customer_reps = User.query.filter_by(is_customer_rep=True).all()
+            for rep in customer_reps:
+                notification = Notification(
+                    user_id=rep.id,
+                    title='New Question',
+                    message=f'New question about auction "{question.auction.title}"',
+                    type='new_question',
+                    link=f'/auction/{auction_id}'
+                )
+                db.session.add(notification)
+            
+            # Send a single notification to all customer reps
+            socketio.emit('notification', {
+                'title': 'New Question',
+                'message': f'New question from {question.user.username} about auction "{question.auction.title}"',
+                'type': 'new_question',
+                'link': f'/auction/{auction_id}'
+            }, room='customer_reps')
+
+@socketio.on('new_answer')
+def handle_new_answer(data):
+    """Handle new answer event."""
+    question_id = data.get('question_id')
+    auction_id = data.get('auction_id')
+    answer_text = data.get('answer_text')
+    
+    if question_id and auction_id:
+        question = Question.query.get(question_id)
+        if question:
+            # Emit to all users in the auction room
+            socketio.emit('new_answer', {
+                'question_id': question.id,
+                'auction_id': auction_id,
+                'user_id': current_user.id,
+                'question_user_id': question.user_id,
+                'answer_text': answer_text,
+                'answer_username': current_user.username,
+                'answer_timestamp': datetime.utcnow().isoformat(),
+                'auction_title': question.auction.title
+            }, room=f'auction_{auction_id}')
+            
+            # Notify the user who asked the question
+            notification = Notification(
+                user_id=question.user_id,
+                type='question_answered',
+                message=f'Your question about "{question.auction.title}" has been answered',
+                reference_id=auction_id
+            )
+            db.session.add(notification)
+            socketio.emit('notification', {
+                'title': 'Question Answered',
+                'message': notification.message,
+                'type': notification.type,
+                'link': f'/auction/{auction_id}'
+            }, room=f'user_{question.user_id}')
 
 @socketio.on('new_bid')
 def handle_new_bid(data):

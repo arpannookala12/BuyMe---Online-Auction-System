@@ -3,6 +3,7 @@ from flask_login import login_required, current_user
 from app import db
 from app.models import Item, Category, AttributeDefinition
 from app.models.user import User
+from datetime import datetime
 import json
 
 item_bp = Blueprint('item', __name__, url_prefix='/item')
@@ -11,7 +12,7 @@ item_bp = Blueprint('item', __name__, url_prefix='/item')
 def view(id):
     """View details of a specific item"""
     item = Item.query.get_or_404(id)
-    return render_template('item/view.html', item=item)
+    return render_template('item/view.html', item=item, now=datetime.utcnow)
 
 @item_bp.route('/create', methods=['GET', 'POST'])
 @login_required

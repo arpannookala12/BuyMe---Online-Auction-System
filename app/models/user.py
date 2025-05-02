@@ -60,6 +60,10 @@ class User(UserMixin, db.Model):
         if not reviews:
             return None
         return sum(review.rating for review in reviews) / len(reviews)
+        
+    def get_average_rating(self):
+        """Alias for get_seller_rating for compatibility."""
+        return self.get_seller_rating()
 
 @login_manager.user_loader
 def load_user(id):

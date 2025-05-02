@@ -6,6 +6,7 @@ from flask_mail import Mail
 from flask_socketio import SocketIO
 from flask_apscheduler import APScheduler
 from config import Config
+from datetime import datetime
 import json
 
 # Initialize Flask extensions
@@ -41,6 +42,13 @@ def create_app(config_class=Config):
             except json.JSONDecodeError:
                 return {}
         return value
+    
+    # Add global functions to Jinja2 context
+    @app.context_processor
+    def utility_processor():
+        return {
+            'now': datetime.utcnow
+        }
     
     # Register blueprints
     from app.routes.auth import auth_bp

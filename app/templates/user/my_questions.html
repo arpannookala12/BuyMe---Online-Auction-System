@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+
+{% block title %}My Questions - BuyMe{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>My Questions</h1>
+    
+    <div id="questions-list" class="list-group mt-4">
+        {% if questions %}
+            {% for question in questions %}
+                <div class="list-group-item question-item" data-question-id="{{ question.id }}">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="flex-grow-1">
+                            <h5 class="mb-1">
+                                <a href="{{ url_for('auction.view', id=question.auction_id) }}">
+                                    {{ question.auction.title }}
+                                </a>
+                            </h5>
+                            <p class="mb-1">{{ question.text }}</p>
+                            <small class="text-muted">
+                                Asked on {{ question.created_at.strftime('%Y-%m-%d %H:%M') }}
+                            </small>
+                        </div>
+                        <span class="badge {% if question.is_answered %}bg-success{% else %}bg-warning{% endif %}">
+                            {% if question.is_answered %}Answered{% else %}Unanswered{% endif %}
+                        </span>
+                    </div>
+                    
+                    {% if question.answers %}
+                        <div class="answers-list ms-4 mt-2">
+                            {% for answer in question.answers %}
+                                <div class="answer-item mb-2 p-2 bg-light rounded">
+                                    <div class="answer-header d-flex justify-content-between align-items-center mb-1">
+                                        <span class="fw-bold">
+                                            {{ answer.user.username }}
+                                            {% if answer.user.is_customer_rep %}
+                                                <span class="badge bg-info">Customer Rep</span>
+                                            {% endif %}
+                                        </span>
+                                        <span class="text-muted">{{ answer.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</span>
+                                    </div>
+                                    <div class="answer-text">{{ answer.answer_text }}</div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        {% else %}
+            <div class="alert alert-info">
+                You haven't asked any questions yet.
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Define the current user ID as a JavaScript variable
+    const currentUserId = {{ current_user.id|tojson }};
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        const socket = io();
+        
+        // Join user's personal room for notifications
+        socket.emit('join_user_room', { user_id: currentUserId });
+        
+        // Handle new answers
+        socket.on('new_answer', function(data) {
+            if (data.question_user_id === currentUserId) {
+                const questionItem = document.querySelector(`.question-item[data-question-id="${data.question_id}"]`);
+                if (questionItem) {
+                    // Update status badge
+                    const statusBadge = questionItem.querySelector('.badge');
+                    statusBadge.className = 'badge bg-success';
+                    statusBadge.textContent = 'Answered';
+                    
+                    // Add answer to answers list
+                    let answersList = questionItem.querySelector('.answers-list');
+                    if (!answersList) {
+                        answersList = document.createElement('div');
+                        answersList.className = 'answers-list ms-4 mt-2';
+                        questionItem.appendChild(answersList);
+                    }
+                    
+                    const answerItem = document.createElement('div');
+                    answerItem.className = 'answer-item mb-2 p-2 bg-light rounded';
+                    answerItem.innerHTML = `
+                        <div class="answer-header d-flex justify-content-between align-items-center mb-1">
+                            <span class="fw-bold">
+                                ${data.answer_username}
+                                <span class="badge bg-info">Customer Rep</span>
+                            </span>
+                            <span class="text-muted">${new Date(data.answer_timestamp).toLocaleString()}</span>
+                        </div>
+                        <div class="answer-text">${data.answer_text}</div>
+                    `;
+                    answersList.appendChild(answerItem);
+                    
+                    // Show notification
+                    showNotification({
+                        title: 'Question Answered',
+                        message: `Your question about "${data.auction_title}" has been answered`,
+                        type: 'success',
+                        link: `/auction/${data.auction_id}`
+                    });
+                }
+            }
+        });
+    });
+</script>
+{% endblock %} 

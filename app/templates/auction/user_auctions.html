@@ -1,149 +1,111 @@
 {% extends "base.html" %}
 
+{% block title %}{{ title }} - BuyMe{% endblock %}
+
 {% block content %}
 <div class="container mt-4">
     <div class="row">
         <div class="col-md-12">
             <div class="card mb-4">
-                <div class="card-header">
-                    <h2 class="mb-0">{{ user.username }}'s Auction History</h2>
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h2 class="mb-0">{{ title }}</h2>
+                    <div>
+                        <a href="{{ url_for('auction.user_auctions', user_id=user.id, type='seller') }}" 
+                           class="btn btn-outline-primary {{ 'active' if auction_type == 'seller' else '' }}">
+                            Selling
+                        </a>
+                        <a href="{{ url_for('auction.user_auctions', user_id=user.id, type='buyer') }}" 
+                           class="btn btn-outline-primary {{ 'active' if auction_type == 'buyer' else '' }}">
+                            Won
+                        </a>
+                        <a href="{{ url_for('auction.user_auctions', user_id=user.id, type='bidder') }}" 
+                           class="btn btn-outline-primary {{ 'active' if auction_type == 'bidder' else '' }}">
+                            Bid On
+                        </a>
+                    </div>
                 </div>
                 <div class="card-body">
-                    <!-- Tabs -->
-                    <ul class="nav nav-tabs mb-4" id="auctionTabs" role="tablist">
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link active" id="bids-tab" data-bs-toggle="tab" 
-                                    data-bs-target="#bids" type="button" role="tab">
-                                Auctions Bid On ({{ auctions_bid_on|length }})
-                            </button>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="sold-tab" data-bs-toggle="tab" 
-                                    data-bs-target="#sold" type="button" role="tab">
-                                Auctions Sold ({{ auctions_sold|length }})
-                            </button>
-                        </li>
-                    </ul>
-                    
-                    <!-- Tab Content -->
-                    <div class="tab-content" id="auctionTabsContent">
-                        <!-- Auctions Bid On -->
-                        <div class="tab-pane fade show active" id="bids" role="tabpanel">
-                            {% if auctions_bid_on %}
-                            <div class="table-responsive">
-                                <table class="table">
-                                    <thead>
-                                        <tr>
-                                            <th>Auction</th>
-                                            <th>Your Highest Bid</th>
-                                            <th>Current Price</th>
-                                            <th>Status</th>
-                                            <th>End Date</th>
-                                            <th>Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for auction in auctions_bid_on %}
-                                        <tr>
-                                            <td>
-                                                <a href="{{ url_for('auction.view', id=auction.id) }}">
-                                                    {{ auction.title }}
-                                                </a>
-                                            </td>
-                                            <td>
-                                                {% set user_bid = auction.bids.filter_by(bidder_id=user.id).order_by(Bid.amount.desc()).first() %}
-                                                ${{ "%.2f"|format(user_bid.amount) if user_bid else "0.00" }}
-                                            </td>
-                                            <td>${{ "%.2f"|format(auction.current_price) }}</td>
-                                            <td>
-                                                {% if auction.is_ended %}
-                                                {% if auction.winner_id == user.id %}
-                                                <span class="badge bg-success">Won</span>
-                                                {% else %}
-                                                <span class="badge bg-danger">Lost</span>
-                                                {% endif %}
-                                                {% else %}
-                                                <span class="badge bg-primary">Active</span>
-                                                {% endif %}
-                                            </td>
-                                            <td>{{ auction.end_time.strftime('%Y-%m-%d %H:%M') }}</td>
-                                            <td>
-                                                <a href="{{ url_for('auction.view', id=auction.id) }}" 
-                                                   class="btn btn-sm btn-primary">View</a>
-                                            </td>
-                                        </tr>
-                                        {% endfor %}
-                                    </tbody>
-                                </table>
-                            </div>
-                            {% else %}
-                            <div class="alert alert-info">
-                                You haven't bid on any auctions yet.
-                            </div>
-                            {% endif %}
-                        </div>
-                        
-                        <!-- Auctions Sold -->
-                        <div class="tab-pane fade" id="sold" role="tabpanel">
-                            {% if auctions_sold %}
-                            <div class="table-responsive">
-                                <table class="table">
-                                    <thead>
-                                        <tr>
-                                            <th>Auction</th>
-                                            <th>Starting Price</th>
-                                            <th>Final Price</th>
-                                            <th>Status</th>
-                                            <th>End Date</th>
-                                            <th>Winner</th>
-                                            <th>Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for auction in auctions_sold %}
-                                        <tr>
-                                            <td>
-                                                <a href="{{ url_for('auction.view', id=auction.id) }}">
-                                                    {{ auction.title }}
-                                                </a>
-                                            </td>
-                                            <td>${{ "%.2f"|format(auction.initial_price) }}</td>
-                                            <td>${{ "%.2f"|format(auction.current_price) }}</td>
-                                            <td>
-                                                {% if auction.is_ended %}
-                                                {% if auction.winner %}
-                                                <span class="badge bg-success">Sold</span>
-                                                {% else %}
-                                                <span class="badge bg-warning">No Winner</span>
-                                                {% endif %}
-                                                {% else %}
-                                                <span class="badge bg-primary">Active</span>
-                                                {% endif %}
-                                            </td>
-                                            <td>{{ auction.end_time.strftime('%Y-%m-%d %H:%M') }}</td>
-                                            <td>
-                                                {% if auction.winner %}
-                                                {{ auction.winner.username }}
-                                                {% else %}
-                                                -
-                                                {% endif %}
-                                            </td>
-                                            <td>
-                                                <a href="{{ url_for('auction.view', id=auction.id) }}" 
-                                                   class="btn btn-sm btn-primary">View</a>
-                                            </td>
-                                        </tr>
-                                        {% endfor %}
-                                    </tbody>
-                                </table>
-                            </div>
-                            {% else %}
-                            <div class="alert alert-info">
-                                You haven't sold any items yet.
-                            </div>
-                            {% endif %}
+                    <!-- Status filter -->
+                    <div class="mb-4">
+                        <div class="btn-group" role="group">
+                            <a href="{{ url_for('auction.user_auctions', user_id=user.id, type=auction_type, status='all') }}" 
+                               class="btn btn-outline-secondary {{ 'active' if status == 'all' else '' }}">
+                                All
+                            </a>
+                            <a href="{{ url_for('auction.user_auctions', user_id=user.id, type=auction_type, status='active') }}" 
+                               class="btn btn-outline-secondary {{ 'active' if status == 'active' else '' }}">
+                                Active
+                            </a>
+                            <a href="{{ url_for('auction.user_auctions', user_id=user.id, type=auction_type, status='ended') }}" 
+                               class="btn btn-outline-secondary {{ 'active' if status == 'ended' else '' }}">
+                                Ended
+                            </a>
                         </div>
                     </div>
+                    
+                    {% if auctions %}
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Auction</th>
+                                    <th>Starting Price</th>
+                                    <th>Current Price</th>
+                                    <th>Status</th>
+                                    <th>End Date</th>
+                                    {% if auction_type == 'seller' %}
+                                    <th>Winner</th>
+                                    {% endif %}
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for auction in auctions %}
+                                <tr>
+                                    <td>
+                                        <a href="{{ url_for('auction.view', id=auction.id) }}">
+                                            {{ auction.title }}
+                                        </a>
+                                    </td>
+                                    <td>${{ "%.2f"|format(auction.initial_price) }}</td>
+                                    <td>${{ "%.2f"|format(auction.current_price) }}</td>
+                                    <td>
+                                        {% if auction.is_ended %}
+                                            {% if auction.winner_id %}
+                                                <span class="badge bg-success">Completed</span>
+                                            {% else %}
+                                                <span class="badge bg-warning">No Winner</span>
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="badge bg-primary">Active</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ auction.end_time.strftime('%Y-%m-%d %H:%M') }}</td>
+                                    {% if auction_type == 'seller' %}
+                                    <td>
+                                        {% if auction.winner %}
+                                            <a href="{{ url_for('user.profile_view', id=auction.winner.id) }}">
+                                                {{ auction.winner.username }}
+                                            </a>
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                    {% endif %}
+                                    <td>
+                                        <a href="{{ url_for('auction.view', id=auction.id) }}" 
+                                           class="btn btn-sm btn-primary">View</a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">
+                        No auctions found.
+                    </div>
+                    {% endif %}
                 </div>
             </div>
         </div>

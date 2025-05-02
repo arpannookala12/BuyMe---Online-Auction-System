@@ -64,14 +64,22 @@
                                 </td>
                                 <td>
                                     <a href="{{ url_for('auction.view', id=auction.id) }}" class="btn btn-sm btn-primary">View</a>
-                                    {% if auction.is_active and auction.end_time > current_time %}
-                                        <form method="POST" action="{{ url_for('customer_rep.toggle_auction', id=auction.id) }}" class="d-inline">
-                                            <button type="submit" class="btn btn-sm btn-warning">Deactivate</button>
+                                    
+                                    {% if auction.end_time > current_time %}
+                                        <form method="POST" action="{{ url_for('customer_rep.delete_auction', auction_id=auction.id) }}" class="d-inline"
+                                              onsubmit="return confirm('Are you sure you want to delete this auction?');">
+                                            <button type="submit" class="btn btn-sm btn-danger">Delete</button>
                                         </form>
-                                    {% elif not auction.is_active and auction.end_time > current_time %}
-                                        <form method="POST" action="{{ url_for('customer_rep.toggle_auction', id=auction.id) }}" class="d-inline">
-                                            <button type="submit" class="btn btn-sm btn-success">Activate</button>
-                                        </form>
+                                    
+                                        {% if auction.is_active %}
+                                            <form method="POST" action="{{ url_for('customer_rep.toggle_auction', id=auction.id) }}" class="d-inline">
+                                                <button type="submit" class="btn btn-sm btn-warning">Deactivate</button>
+                                            </form>
+                                        {% else %}
+                                            <form method="POST" action="{{ url_for('customer_rep.toggle_auction', id=auction.id) }}" class="d-inline">
+                                                <button type="submit" class="btn btn-sm btn-success">Activate</button>
+                                            </form>
+                                        {% endif %}
                                     {% endif %}
                                 </td>
                             </tr>

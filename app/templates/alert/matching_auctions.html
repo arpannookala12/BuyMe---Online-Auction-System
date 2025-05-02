@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block title %}Matching Auctions - BuyMe{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h2 class="mb-0">Auctions Matching Your Alert</h2>
+            <a href="{{ url_for('alert.manage') }}" class="btn btn-outline-primary">Back to Alerts</a>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-info">
+                <h5>Alert Criteria:</h5>
+                <ul class="mb-0">
+                    {% if alert.keywords %}
+                    <li><strong>Keywords:</strong> {{ alert.keywords }}</li>
+                    {% endif %}
+                    {% if alert.category %}
+                    <li><strong>Category:</strong> {{ alert.category.name }}</li>
+                    {% endif %}
+                    {% if alert.min_price is not none or alert.max_price is not none %}
+                    <li><strong>Price Range:</strong> 
+                        {% if alert.min_price is not none and alert.max_price is not none %}
+                            ${{ alert.min_price }} - ${{ alert.max_price }}
+                        {% elif alert.min_price is not none %}
+                            ${{ alert.min_price }}+
+                        {% elif alert.max_price is not none %}
+                            Up to ${{ alert.max_price }}
+                        {% endif %}
+                    </li>
+                    {% endif %}
+                </ul>
+            </div>
+            
+            <h4 class="mt-4">Found {{ matches_count }} matching auction{% if matches_count != 1 %}s{% endif %}</h4>
+            
+            {% if auctions %}
+            <div class="row row-cols-1 row-cols-md-3 g-4 mt-2">
+                {% for auction in auctions %}
+                <div class="col">
+                    <div class="card h-100">
+                        {% if auction.item.image_url %}
+                        <img src="{{ auction.item.image_url }}" class="card-img-top" alt="{{ auction.title }}">
+                        {% endif %}
+                        <div class="card-body">
+                            <h5 class="card-title">{{ auction.title }}</h5>
+                            <p class="card-text text-truncate">{{ auction.description }}</p>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="h5 mb-0">${{ "%.2f"|format(auction.current_price) }}</span>
+                                <span class="badge bg-success">Active</span>
+                            </div>
+                            <div class="mt-2">
+                                <small class="text-muted">Ends {{ auction.end_time.strftime('%Y-%m-%d %H:%M') }}</small>
+                            </div>
+                        </div>
+                        <div class="card-footer">
+                            <a href="{{ url_for('auction.view', id=auction.id) }}" class="btn btn-primary w-100">View Details</a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="alert alert-warning mt-3">
+                <p class="mb-0">No active auctions currently match your alert criteria. Check back later or modify your alert settings.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %} 

@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8">
+            <h1>{{ auction.title }}</h1>
+            <div class="auction-details">
+                <p class="current-price">Current Price: ${{ auction.current_price }}</p>
+                <p class="auction-status">Status: {{ auction.status }}</p>
+                <p>Ends: {{ auction.end_time }}</p>
+            </div>
+            
+            <div class="item-description mt-4">
+                <h3>Description</h3>
+                <p>{{ auction.item.description }}</p>
+            </div>
+            
+            <div class="questions-container mt-4">
+                {% include 'auction_questions.html' %}
+            </div>
+            
+            <div class="bid-history mt-4">
+                <h3>Bid History</h3>
+                {% for bid in auction.bids %}
+                <div class="bid-item">
+                    <span class="bidder">{{ bid.user.username }}</span>
+                    <span class="bid-amount">${{ bid.amount }}</span>
+                    <span class="bid-time">{{ bid.timestamp }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            
+            {% if auction.status == 'active' %}
+            <form id="bid-form" class="mt-4">
+                <div class="form-group">
+                    <label for="bid-amount">Bid Amount</label>
+                    <input type="number" class="form-control" id="bid-amount" min="{{ auction.current_price + 1 }}" step="0.01">
+                </div>
+                <button type="submit" class="btn btn-primary">Place Bid</button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/auction.js') }}"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        initAuctionSocket({{ auction.id|tojson }});
+    });
+</script>
+
+{% endblock %} 

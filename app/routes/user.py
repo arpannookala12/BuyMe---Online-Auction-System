@@ -139,7 +139,8 @@ def profile_view(id):
                           user=user, 
                           recent_auctions=recent_auctions,
                           reviews=reviews,
-                          avg_rating=avg_rating)
+                          avg_rating=avg_rating,
+                          now=datetime.utcnow)
 
 @user_bp.route('/questions')
 @login_required
@@ -147,3 +148,10 @@ def view_questions():
     """View all questions asked by the user and their answers."""
     questions = Question.query.filter_by(user_id=current_user.id).order_by(Question.created_at.desc()).all()
     return render_template('user/questions.html', questions=questions)
+
+@user_bp.route('/my-questions')
+@login_required
+def my_questions():
+    """View all questions asked by the current user."""
+    questions = Question.query.filter_by(user_id=current_user.id).order_by(Question.created_at.desc()).all()
+    return render_template('user/my_questions.html', questions=questions)

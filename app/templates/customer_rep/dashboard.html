@@ -6,6 +6,9 @@
 <div class="container mt-4">
     <h1>Customer Representative Dashboard</h1>
     
+    <!-- Real-time Notifications -->
+    <div id="notifications" class="mt-3"></div>
+    
     <div class="row mt-4">
         <div class="col-md-4">
             <div class="card mb-4">
@@ -86,4 +89,31 @@
         </div>
     </div>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const socket = io();
+        
+        // Join customer rep room
+        socket.emit('join_customer_rep_room');
+        
+        // Handle new questions
+        socket.on('new_question', function(data) {
+            const notification = document.createElement('div');
+            notification.className = 'alert alert-info alert-dismissible fade show';
+            notification.innerHTML = `
+                <strong>New Question</strong>
+                <p>${data.user_username} asked a question about "${data.auction_title}"</p>
+                <a href="${data.link}" class="btn btn-sm btn-primary">View Question</a>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            
+            const container = document.getElementById('notifications');
+            if (container) {
+                container.appendChild(notification);
+                setTimeout(() => notification.remove(), 5000);
+            }
+        });
+    });
+</script>
 {% endblock %}

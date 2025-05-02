@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block title %}Ask a Question - {{ auction.title }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Ask a Question</h2>
+    
+    <div class="alert alert-info">
+        <i class="fas fa-info-circle"></i>
+        Your question will be sent to our customer representatives. You can view their answers in your <a href="{{ url_for('user.my_questions') }}">My Questions</a> page.
+    </div>
+    
+    {% if current_user.is_authenticated %}
+        <div class="mt-4">
+            <form id="ask-question-form">
+                <div class="form-group">
+                    <textarea class="form-control" id="question-text" rows="3" required placeholder="Type your question here..."></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary mt-2">Submit Question</button>
+            </form>
+        </div>
+    {% else %}
+        <div class="alert alert-warning">
+            Please <a href="{{ url_for('auth.login') }}">login</a> to ask a question.
+        </div>
+    {% endif %}
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const socket = io();
+        const auctionId = {{ auction.id|tojson }};
+        
+        // Handle question submission
+        const askQuestionForm = document.getElementById('ask-question-form');
+        if (askQuestionForm) {
+            askQuestionForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const questionText = document.getElementById('question-text').value;
+                
+                fetch(`/auction/${auctionId}/question`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ text: questionText })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById('question-text').value = '';
+                        showNotification({
+                            title: 'Question Submitted',
+                            message: 'Your question has been sent to our customer representatives.',
+                            type: 'success'
+                        });
+                    }
+                });
+            });
+        }
+    });
+</script>
+{% endblock %} 

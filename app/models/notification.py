@@ -7,9 +7,9 @@ class Notification(db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    type = db.Column(db.String(50), nullable=False)  # e.g., 'bid_placed', 'auction_ended', 'outbid'
+    type = db.Column(db.String(50), nullable=False)  # e.g., 'bid_placed', 'auction_ended', 'outbid', 'new_question', 'question_answered', 'new_auction'
     message = db.Column(db.String(255), nullable=False)
-    reference_id = db.Column(db.Integer)  # ID of related entity (e.g., auction_id)
+    reference_id = db.Column(db.Integer)  # ID of related entity (e.g., auction_id, question_id)
     is_read = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
@@ -63,6 +63,24 @@ class Notification(db.Model):
         """Create a notification for new auction creation."""
         message = "A new auction matching your alert has been created"
         return cls(user_id=user_id, type='auction_created', message=message, reference_id=auction_id)
+    
+    @classmethod
+    def create_question_notification(cls, question_id, auction_id, user_id):
+        """Create a notification for a new question."""
+        message = f"New question posted on auction {auction_id}"
+        return cls(user_id=user_id, type='new_question', message=message, reference_id=question_id)
+    
+    @classmethod
+    def create_answer_notification(cls, answer_id, question_id, user_id):
+        """Create a notification for a new answer."""
+        message = f"Your question has been answered"
+        return cls(user_id=user_id, type='question_answered', message=message, reference_id=answer_id)
+    
+    @classmethod
+    def create_new_auction_notification(cls, auction_id, user_id):
+        """Create a notification for a new auction."""
+        message = f"New auction posted in your category"
+        return cls(user_id=user_id, type='new_auction', message=message, reference_id=auction_id)
     
     def to_dict(self):
         """Convert notification to dictionary."""

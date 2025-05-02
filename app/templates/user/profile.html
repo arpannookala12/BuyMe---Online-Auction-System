@@ -12,11 +12,66 @@
             <div class="card-body">
                 <p><strong>Email:</strong> {{ user.email }}</p>
                 <p><strong>Member Since:</strong> {{ user.created_at.strftime('%b %d, %Y') }}</p>
-                
-                <div class="d-grid gap-2 mt-3">
-                    <a href="{{ url_for('user.my_auctions') }}" class="btn btn-primary">My Auctions</a>
-                    <a href="{{ url_for('user.my_bids') }}" class="btn btn-primary">My Bids</a>
-                    <a href="{{ url_for('alert.manage') }}" class="btn btn-primary">My Alerts</a>
+            </div>
+        </div>
+        
+        <!-- Auction Activity -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h3>My Auction Activity</h3>
+            </div>
+            <div class="card-body">
+                <div class="row row-cols-1 row-cols-md-1 g-3">
+                    <div class="col">
+                        <a href="{{ url_for('auction.user_auctions', user_id=user.id, type='seller') }}" class="text-decoration-none">
+                            <div class="card h-100 border-primary">
+                                <div class="card-body text-center">
+                                    <i class="bi bi-tag-fill display-6 text-primary mb-2"></i>
+                                    <h5 class="card-title">My Listings</h5>
+                                    <p class="card-text">Auctions you're selling</p>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                    <div class="col">
+                        <a href="{{ url_for('auction.user_auctions', user_id=user.id, type='bidder') }}" class="text-decoration-none">
+                            <div class="card h-100 border-info">
+                                <div class="card-body text-center">
+                                    <i class="bi bi-cash display-6 text-info mb-2"></i>
+                                    <h5 class="card-title">My Bids</h5>
+                                    <p class="card-text">Auctions you've placed bids on</p>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                    <div class="col">
+                        <a href="{{ url_for('auction.user_auctions', user_id=user.id, type='buyer') }}" class="text-decoration-none">
+                            <div class="card h-100 border-success">
+                                <div class="card-body text-center">
+                                    <i class="bi bi-trophy-fill display-6 text-success mb-2"></i>
+                                    <h5 class="card-title">Won Auctions</h5>
+                                    <p class="card-text">Auctions you've won</p>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Alerts and Wishlist -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h3>My Preferences</h3>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('alert.manage') }}" class="btn btn-primary">
+                        <i class="bi bi-bell-fill"></i> My Alerts
+                    </a>
+                    <a href="{{ url_for('wishlist.view') }}" class="btn btn-primary">
+                        <i class="bi bi-heart-fill"></i> My Wishlist
+                    </a>
                 </div>
             </div>
         </div>

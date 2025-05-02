@@ -21,19 +21,19 @@
                         
                         <!-- Categories -->
                         <div class="mb-3">
-                            <label class="form-label">Categories</label>
-                            <div class="list-group">
-                                <a href="{{ url_for('auction.browse') }}" 
-                                   class="list-group-item list-group-item-action {% if not category_id %}active{% endif %}">
-                                    All Categories
-                                </a>
+                            <label for="category_id" class="form-label">Categories</label>
+                            <select class="form-select" id="category_id" name="category_id">
+                                <option value="">All Categories</option>
                                 {% for cat in categories %}
-                                <a href="{{ url_for('auction.browse', category_id=cat.id) }}" 
-                                   class="list-group-item list-group-item-action {% if category_id == cat.id %}active{% endif %}">
-                                    {{ cat.name }}
-                                </a>
+                                <option value="{{ cat.id }}" {% if category_id == cat.id %}selected{% endif %}>{{ cat.name }}</option>
+                                    {% for subcat in cat.subcategories %}
+                                    <option value="{{ subcat.id }}" {% if category_id == subcat.id %}selected{% endif %}>&nbsp;&nbsp;└ {{ subcat.name }}</option>
+                                        {% for subsubcat in subcat.subcategories %}
+                                        <option value="{{ subsubcat.id }}" {% if category_id == subsubcat.id %}selected{% endif %}>&nbsp;&nbsp;&nbsp;&nbsp;└ {{ subsubcat.name }}</option>
+                                        {% endfor %}
+                                    {% endfor %}
                                 {% endfor %}
-                            </div>
+                            </select>
                         </div>
                         
                         <!-- Price Range -->
@@ -65,9 +65,13 @@
                             <select class="form-select" name="sort">
                                 <option value="end_time_asc" {% if sort_by == 'end_time_asc' %}selected{% endif %}>Ending Soon</option>
                                 <option value="end_time_desc" {% if sort_by == 'end_time_desc' %}selected{% endif %}>Ending Last</option>
-                                <option value="price_asc" {% if sort_by == 'price_asc' %}selected{% endif %}>Price: Low to High</option>
-                                <option value="price_desc" {% if sort_by == 'price_desc' %}selected{% endif %}>Price: High to Low</option>
+                                <option value="price_asc" {% if sort_by == 'price_asc' %}selected{% endif %}>Current Price: Low to High</option>
+                                <option value="price_desc" {% if sort_by == 'price_desc' %}selected{% endif %}>Current Price: High to Low</option>
+                                <option value="bids_desc" {% if sort_by == 'bids_desc' %}selected{% endif %}>Most Bids</option>
+                                <option value="bids_asc" {% if sort_by == 'bids_asc' %}selected{% endif %}>Fewest Bids</option>
                                 <option value="newest" {% if sort_by == 'newest' %}selected{% endif %}>Newest First</option>
+                                <option value="oldest" {% if sort_by == 'oldest' %}selected{% endif %}>Oldest First</option>
+                                <option value="category" {% if sort_by == 'category' %}selected{% endif %}>By Category</option>
                             </select>
                         </div>
                         
@@ -84,6 +88,40 @@
                 {% if current_user.is_authenticated %}
                 <a href="{{ url_for('auction.create') }}" class="btn btn-success">Create Auction</a>
                 {% endif %}
+            </div>
+            
+            <!-- Filter summary -->
+            <div class="alert alert-light mb-4">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <strong>Showing:</strong> 
+                        {{ auctions.total }} result{% if auctions.total != 1 %}s{% endif %}
+                        {% if search_query %}for "<em>{{ search_query }}</em>"{% endif %}
+                        {% if category_id %}in <em>{{ categories|selectattr('id', 'equalto', category_id)|first|attr('name') }}</em>{% endif %}
+                        {% if min_price or max_price %}
+                            with price 
+                            {% if min_price %}${{ min_price }}+{% endif %}
+                            {% if min_price and max_price %} to {% endif %}
+                            {% if max_price %}${{ max_price }} or less{% endif %}
+                        {% endif %}
+                        ({{ status }} auctions)
+                    </div>
+                    <div>
+                        <small class="text-muted">
+                            Sorted by: 
+                            {% if sort_by == 'end_time_asc' %}Ending Soon
+                            {% elif sort_by == 'end_time_desc' %}Ending Last
+                            {% elif sort_by == 'price_asc' %}Lowest Price First
+                            {% elif sort_by == 'price_desc' %}Highest Price First
+                            {% elif sort_by == 'bids_desc' %}Most Bids
+                            {% elif sort_by == 'bids_asc' %}Fewest Bids
+                            {% elif sort_by == 'category' %}Category
+                            {% elif sort_by == 'newest' %}Newest First
+                            {% elif sort_by == 'oldest' %}Oldest First
+                            {% endif %}
+                        </small>
+                    </div>
+                </div>
             </div>
             
             {% if auctions.items %}

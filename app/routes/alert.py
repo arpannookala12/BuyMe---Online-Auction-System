@@ -1,7 +1,8 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_required, current_user
 from app import db
-from app.models import Alert, Category
+from app.models import Alert, Category, Auction
+from datetime import datetime
 
 alert_bp = Blueprint('alert', __name__, url_prefix='/alert')
 
@@ -82,3 +83,34 @@ def toggle(id):
     status = 'activated' if alert.is_active else 'deactivated'
     flash(f'Alert {status} successfully', 'success')
     return redirect(url_for('alert.manage'))
+
+@alert_bp.route('/matching/<int:alert_id>')
+@login_required
+def matching_auctions(alert_id):
+    """Show auctions that match a specific alert"""
+    alert = Alert.query.get_or_404(alert_id)
+    
+    # Check if the alert belongs to the current user
+    if alert.user_id != current_user.id:
+        flash('You are not authorized to view this alert', 'danger')
+        return redirect(url_for('alert.manage'))
+    
+    # Get current active auctions
+    current_time = datetime.utcnow()
+    query = Auction.query.filter(
+        Auction.is_active == True,
+        Auction.end_time > current_time
+    )
+    
+    # Get all auctions and filter them through the alert matching logic
+    all_auctions = query.all()
+    matching_auctions = []
+    
+    for auction in all_auctions:
+        if alert.matches_auction(auction):
+            matching_auctions.append(auction)
+    
+    return render_template('alert/matching_auctions.html', 
+                          alert=alert, 
+                          auctions=matching_auctions,
+                          matches_count=len(matching_auctions))

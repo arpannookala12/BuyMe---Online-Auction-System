@@ -1,106 +1,96 @@
-# BuyMe Auction System
+# BuyMe - Online Auction System
 
-BuyMe is an eBay-like online auction system built with Flask and MySQL that allows users to buy and sell items through online auctions. This project is developed as part of CS 527 - Database Systems.
+BuyMe is a comprehensive online auction platform inspired by eBay, built as part of CS 527 - Database Systems project. The system allows users to buy and sell items through online auctions with a rich feature set and intuitive user experience.
 
-## Features
+## Features Implemented
 
-### End Users (Buyers and Sellers)
-- Account creation, login, and profile management
-- Create auctions with item descriptions and photos
-- Browse and search for items by various criteria
-- Place bids on auctions with automatic bidding support
-- Create alerts for items of interest
-- View bid history and auction details
-- Track personal bidding and selling activity
+### User Management
+- ✅ Create accounts (buyers, sellers)
+- ✅ Login and logout functionality
+- ✅ User profile management
+- ✅ User roles: Regular users, Customer Representatives, and Administrators
 
-### Customer Representatives
-- Assist users with account management
-- Answer questions and resolve issues
-- Modify user information when necessary
-- Remove bids or illegal auctions
-- Maintain system integrity
+### Auction Management
+- ✅ Sellers can create auctions and post items for sale
+- ✅ Set all item characteristics including images
+- ✅ Set closing date and time for auctions
+- ✅ Set hidden minimum price (reserve)
+- ✅ Hierarchical category system with attributes
 
-### Administrative Staff
-- Create accounts for customer representatives
-- Generate comprehensive sales reports
-- Manage system categories
-- Monitor overall system performance
+### Bidding System
+- ✅ Manual bidding on items
+- ✅ Automatic bidding with secret upper limits and bid increments
+- ✅ Notifications when outbid
+- ✅ Alerts when bids exceed upper limits
+- ✅ Winner determination at auction close
+- ✅ Winner notifications
+
+### Browse and Search
+- ✅ Browse items by category and various criteria
+- ✅ Advanced search with multiple filters
+- ✅ View bid history for any auction
+- ✅ View all auctions a specific user has participated in
+- ✅ View similar items from recent auctions
+
+### Alert System
+- ✅ Set alerts for specific items of interest
+- ✅ Receive notifications when matching items become available
+- ✅ Email notifications (configurable)
+
+### Q&A System
+- ✅ Users can post questions to customer representatives
+- ✅ Browse and search questions and answers
+- ✅ Customer representatives can respond to inquiries
+
+### Customer Representative Functions
+- ✅ Answer user questions
+- ✅ Edit/delete account information
+- ✅ Remove bids when necessary
+- ✅ Remove auctions that violate policies
+
+### Administrative Functions
+- ✅ Create accounts for customer representatives
+- ✅ Generate comprehensive sales reports including:
+  - Total earnings
+  - Earnings per item
+  - Earnings per item type
+  - Earnings per end-user
+  - Best-selling items
+  - Best buyers
+- ✅ Monitor system performance and activity
+
+### Additional Features
+- ✅ Wishlist functionality
+- ✅ Real-time notifications with Socket.IO
+- ✅ User reviews and ratings
+- ✅ Automated auction closing and winner determination
+- ✅ Mobile-responsive design
 
 ## Technology Stack
 
-- **Frontend**: HTML, CSS, Bootstrap
+- **Frontend**: HTML, CSS, Bootstrap, JavaScript
 - **Backend**: Flask (Python)
 - **Database**: MySQL with SQLAlchemy ORM
-- **Web Server**: Local development server
-
-## Project Structure
-
-The project follows a modular structure:
-
-```
-buyme/
-│
-├── app/
-│   ├── __init__.py          # Flask application factory
-│   ├── config.py            # Configuration settings
-│   ├── models/              # SQLAlchemy models
-│   │   ├── __init__.py
-│   │   ├── user.py          # User, CustomerRep, Admin models
-│   │   ├── item.py          # Item and category models
-│   │   ├── auction.py       # Auction and bid models
-│   │   └── alert.py         # Alert model
-│   │
-│   ├── routes/              # Route handlers
-│   │   ├── __init__.py
-│   │   ├── auth.py          # Authentication routes
-│   │   ├── user.py          # User profile routes
-│   │   ├── item.py          # Item management routes
-│   │   ├── auction.py       # Auction and bidding routes
-│   │   ├── search.py        # Search functionality
-│   │   ├── alert.py         # Alert management
-│   │   ├── customer_rep.py  # Customer representative routes
-│   │   └── admin.py         # Admin routes
-│   │
-│   ├── static/              # Static files (CSS, JS, images)
-│   │   ├── css/
-│   │   ├── js/
-│   │   └── img/
-│   │
-│   └── templates/           # Jinja2 templates
-│       ├── base.html        # Base template
-│       ├── auth/            # Authentication templates
-│       ├── user/            # User profile templates
-│       ├── item/            # Item templates
-│       ├── auction/         # Auction templates
-│       ├── search/          # Search templates
-│       ├── customer_rep/    # Customer representative templates
-│       └── admin/           # Admin templates
-│
-├── migrations/              # Database migrations
-│
-├── tests/                   # Unit and integration tests
-│
-├── .env                     # Environment variables (not in git)
-├── .gitignore               # Git ignore file
-├── requirements.txt         # Project dependencies
-├── run.py                   # Application entry point
-├── create_admin.py          # Script to create admin user
-├── seed_data.py             # Script to populate database with sample data
-└── README.md                # Project documentation
-```
+- **Real-time Communication**: Socket.IO
+- **Task Scheduling**: APScheduler
+- **Email**: Flask-Mail
 
 ## Database Schema
 
 ![Database ER Diagram](image.png)
 
-The system is built around the following database entities:
+Our database schema includes the following main entities:
 
 - **Users**: End users, customer representatives, and administrators
-- **Items**: Products being sold
-- **Categories**: Hierarchical categories for organizing items
-- **Auctions**: Listings with bidding information
+- **Items**: Products being sold with detailed attributes
+- **Categories**: Hierarchical category system with custom attributes
+- **Auctions**: Listings with bidding information and status
 - **Bids**: Individual bids placed on auctions
 - **Alerts**: User-defined criteria for item notifications
+- **Questions/Answers**: Support system communications
+- **Notifications**: System notifications for various events
+- **Wishlists**: User-saved items of interest
+- **Reviews**: User feedback and ratings
 
 ## Setup Instructions
 
@@ -113,8 +103,8 @@ The system is built around the following database entities:
 
 1. **Clone the repository**:
    ```bash
-   git clone https://github.com/your-username/buyme.git
-   cd buyme
+   git clone https://github.com/yourusername/BuyMe---Online-Auction-System.git
+   cd BuyMe---Online-Auction-System
    ```
 
 2. **Create and activate a virtual environment**:
@@ -132,8 +122,16 @@ The system is built around the following database entities:
    ```
    SECRET_KEY=your-secret-key
    DATABASE_URL=mysql+mysqlconnector://username:password@localhost/buyme
+   
+   # Mail settings (optional)
+   MAIL_SERVER=smtp.example.com
+   MAIL_PORT=587
+   MAIL_USE_TLS=True
+   MAIL_USERNAME=your-email@example.com
+   MAIL_PASSWORD=your-email-password
+   MAIL_DEFAULT_SENDER=your-email@example.com
    ```
-   Replace `username`, `password` with your MySQL credentials.
+   Replace placeholders with your actual credentials.
 
 5. **Create the database**:
    ```bash
@@ -166,92 +164,38 @@ The system is built around the following database entities:
    python run.py
    ```
 
-10. **Access the application** at `http://localhost:5000`
+10. **Access the application** at `http://localhost:5001`
 
 ## User Roles and Access
 
-The system has three types of users, each with different capabilities:
-
 ### Regular Users
-- Created through the registration page
-- Can buy and sell items
-- Manage their own profile, auctions, and bids
+- Can register for accounts through the registration page
+- Can buy and sell items through auctions
+- Can set alerts for items of interest
+- Can place bids and use automatic bidding
+- Can add items to wishlist and leave reviews
+- Can ask questions to customer representatives
 
 ### Customer Representatives
 - Created by administrators
-- Access the customer representative dashboard
-- Help users with account issues
-- Can deactivate auctions and remove bids
+- Can answer user questions
+- Can edit user information
+- Can remove bids and auctions
+- Can manage system content
 
 ### Administrators
 - Initial admin account created using `create_admin.py`
-- Additional admins can be created through MySQL directly
-- Access to the admin dashboard
 - Can create customer representatives
-- Generate reports and manage system settings
-
-## Development Workflow
-
-### Git Workflow
-
-1. **Main branch**: Production-ready code
-2. **Development branch**: Integration branch for features
-3. **Feature branches**: Individual features or components
-
-### Branch Naming Convention
-
-- Feature branches: `feature/feature-name`
-- Bug fixes: `fix/bug-name`
-- Documentation: `docs/description`
-
-### Creating a New Feature
-
-1. Create a new branch from development:
-   ```bash
-   git checkout development
-   git pull
-   git checkout -b feature/your-feature-name
-   ```
-
-2. Make your changes and commit them:
-   ```bash
-   git add .
-   git commit -m "Description of changes"
-   ```
-
-3. Push your branch:
-   ```bash
-   git push -u origin feature/your-feature-name
-   ```
-
-4. Create a Pull Request to the development branch
-
-### Code Style
-
-- Follow PEP 8
-- Use docstrings for functions and classes
-- Organize imports alphabetically
-- Use clear variable and function names
-
-## Testing
-
-To run the test suite:
-
-```bash
-python -m pytest
-```
+- Can generate sales reports
+- Can manage categories and system settings
+- Can monitor all system activity
 
 ## Contributors
 
 - Ganesh Arpan Nookala (gn178)
-- Ronit Gandhi
+- Ronit Gandhi (rg1225)
 - Prerna Nookala (kn491)
 
 ## License
 
-This project is licensed under the MIT LICENSE - see the LICENSE file for details.
-
-## Acknowledgments
-
-- Based on the CS 527 - Database Systems for Data Science course project requirements
-- Inspired by eBay's auction system
+This project is licensed under the MIT License - see the LICENSE file for details.
